@@ -1,0 +1,60 @@
+# Node.js and Vite
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Production build artifacts
+/dist
+/build
+/out
+
+# Temporary files and caches
+.cache
+.vite-inspect
+*.tgz
+.npmrc
+.yarn-integrity
+.env.local
+.env.*.local
+
+# Vite-specific
+.vitepress/dist
+.vitepress/cache
+.svelte-kit/
+.nuxt/
+.next/
+
+# Editor/IDE specific files
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Golang
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+*.out
+
+# Code coverage profiles and other test artifacts
+coverage.*
+*.coverprofile
+profile.cov
+
+# Dependency directories (uncomment to ignore vendor/ directory)
+# vendor/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Environment files
+.env
