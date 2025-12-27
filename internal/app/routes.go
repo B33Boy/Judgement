@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 
@@ -26,12 +27,12 @@ func (a *App) RegisterRoutes() http.Handler {
 		MaxAge:           300,
 	}))
 
-	r.Get("/websocket", a.websocketHandler)
-
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/health", a.HealthHandler)
 		r.Post("/session", a.CreateSessionHandler)
 		r.Get("/session/{sessionId}", a.GetSessionHandler)
+
+		r.Get("/websocket", a.websocketHandler)
 	})
 
 	return r
@@ -39,17 +40,18 @@ func (a *App) RegisterRoutes() http.Handler {
 
 func (a *App) HealthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"Status":"Connection Healthy"}`))
+	json.NewEncoder(w).Encode(map[string]string{
+		"Status": "Connection Healthy",
+	})
 }
 
 func (a *App) CreateSessionHandler(w http.ResponseWriter, r *http.Request) {
 
-	a.sessionStore.CreateSession("abc123")
+	session := a.sessionStore.GenerateRandomSession()
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(`{"sessionId":"abc123"}`))
+	json.NewEncoder(w).Encode(session)
 }
 
 func (a *App) GetSessionHandler(w http.ResponseWriter, r *http.Request) {
@@ -61,9 +63,6 @@ func (a *App) GetSessionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusOK)
-	// w.Header().Set("Content-Type", "application/json")
-	// w.WriteHeader(http.StatusOK)
-	// w.Write([]byte(`{"sessionId":"abc123"}`))
 }
 
 func (a *App) websocketHandler(w http.ResponseWriter, r *http.Request) {
