@@ -1,4 +1,4 @@
-package server
+package app
 
 import (
 	"io"
@@ -8,19 +8,23 @@ import (
 )
 
 func TestHandler(t *testing.T) {
-	s := &Server{}
-	server := httptest.NewServer(http.HandlerFunc(s.HelloWorldHandler))
+	app := NewApp()
+
+	server := httptest.NewServer(http.HandlerFunc(app.HealthHandler))
 	defer server.Close()
+
 	resp, err := http.Get(server.URL)
 	if err != nil {
 		t.Fatalf("error making request to server. Err: %v", err)
 	}
 	defer resp.Body.Close()
+
 	// Assertions
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("expected status OK; got %v", resp.Status)
 	}
-	expected := "{\"message\":\"Hello World\"}"
+	expected := "{\"Status\":\"Connection Healthy\"}"
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("error reading response body. Err: %v", err)

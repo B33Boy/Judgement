@@ -1,4 +1,4 @@
-module Judgement
+module github.com/B33Boy/Judgement
 
 go 1.25.5
 
