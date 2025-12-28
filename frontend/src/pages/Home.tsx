@@ -1,16 +1,15 @@
 import { useNavigate } from "react-router-dom";
 
+const API_BASE = `http://localhost:${import.meta.env.VITE_PORT}/api`;
+
 function CreateRoomButton() {
   const navigate = useNavigate();
 
   async function handleSubmit() {
     try {
-      const res = await fetch(
-        `http://localhost:${import.meta.env.VITE_PORT}/api/session`,
-        {
-          method: "POST",
-        }
-      );
+      const res = await fetch(API_BASE + "/session", {
+        method: "POST",
+      });
 
       if (!res.ok) {
         throw new Error("Failed to create session");
