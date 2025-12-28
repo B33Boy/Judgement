@@ -1,24 +1,23 @@
-import { useNavigate, useParams } from "react-router-dom";
-import { useEffect } from "react";
+import { Navigate, useNavigate, useParams } from "react-router-dom";
+// import { useEffect, useState, type SetStateAction } from "react";
+import { useSessionValidation } from "../hooks/useSessionValidation";
 
 export default function SessionPage() {
   const { sessionId } = useParams();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    async function validateSession() {
-      console.log(`${sessionId}`);
-      const res = await fetch(
-        `http://localhost:${import.meta.env.VITE_PORT}/api/session/${sessionId}`
-      );
+  // const [currentPlayers, setCurrentPlayers] = useState();
+  const { valid, loading } = useSessionValidation(sessionId, navigate);
 
-      if (!res.ok) {
-        alert("Invalid Session Id");
-        navigate("/");
-      }
-    }
-    validateSession();
-  }, [sessionId, navigate]);
+  if (loading) return <p> Validating Session</p>;
 
-  return <h2>Session ID: {sessionId}</h2>;
+  if (!valid) {
+    return <Navigate to="/" />;
+  }
+
+  return (
+    <>
+      <h2>Session ID: {sessionId}</h2>
+    </>
+  );
 }
