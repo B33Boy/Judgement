@@ -20,10 +20,13 @@ func NewSession(sessionId string) *Session {
 }
 
 func (s *Session) AddPlayer(player *Player) {
-	s.Players[player.PlayereName] = player
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Players[player.PlayerName] = player
 }
 
-// ==============================================================
+// ==================================================
+
 type SessionStore struct {
 	sessions map[string]*Session
 	mu       sync.RWMutex
@@ -38,7 +41,6 @@ func NewSessionStore() *SessionStore {
 func (s *SessionStore) GetSession(sessionId string) (*Session, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-
 	session, exists := s.sessions[sessionId]
 	return session, exists
 }
@@ -46,7 +48,6 @@ func (s *SessionStore) GetSession(sessionId string) (*Session, bool) {
 func (s *SessionStore) DeleteSession(sessionId string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
 	delete(s.sessions, sessionId)
 }
 
@@ -54,16 +55,19 @@ func (s *SessionStore) GenerateRandomSession() *Session {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	const LENGTH = 8
-	randId := randomString(LENGTH)
+	const length = 8
+	var id string
 
-	for _, exists := s.sessions[randId]; exists; {
-		randId = randomString(LENGTH)
+	for {
+		id = randomString(length)
+		if _, exists := s.sessions[id]; !exists {
+			break
+		}
 	}
 
-	newSession := NewSession(randId)
-	s.sessions[randId] = newSession
-	return newSession
+	session := NewSession(id)
+	s.sessions[id] = session
+	return session
 }
 
 func randomString(n int) string {
@@ -74,11 +78,4 @@ func randomString(n int) string {
 		b[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(b)
-}
-
-// ==============================================================
-
-type Message struct {
-	Type        string   `json:"type"`
-	PlayerNames []string `json:"players,omitempty"`
 }

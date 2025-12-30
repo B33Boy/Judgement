@@ -4,7 +4,7 @@ export async function createSession(): Promise<string> {
   const res = await fetch(`${API_BASE}/session`, { method: "POST" });
 
   if (!res.ok) {
-    throw new Error("Failed to create session!");
+    throw new Error("Failed to create session");
   }
 
   const data = await res.json();
