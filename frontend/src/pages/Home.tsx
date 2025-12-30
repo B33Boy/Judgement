@@ -1,28 +1,20 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { createSession, validateSession } from "../api/session";
 
-const API_BASE = `http://localhost:${import.meta.env.VITE_PORT}/api`;
-
-function CreateRoomButton() {
+function CreateRoomForm({ playerName }: { playerName: string }) {
   const navigate = useNavigate();
 
   async function handleSubmit() {
-    try {
-      const res = await fetch(API_BASE + "/session", {
-        method: "POST",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to create session");
-      }
-
-      const data = await res.json();
-      const sessionId = data.sessionId;
-
-      navigate(`/session/${sessionId}`);
-    } catch (err) {
-      alert("Error creating room");
-      console.error(err);
+    if (!playerName.trim()) {
+      alert("Enter a player name");
+      return;
     }
+    localStorage.setItem("playerName", playerName);
+
+    const sessionId = await createSession();
+
+    navigate(`/session/${sessionId}`);
   }
 
   return (
@@ -32,49 +24,58 @@ function CreateRoomButton() {
   );
 }
 
-function JoinRoomForm() {
+function JoinRoomForm({ playerName }: { playerName: string }) {
   const navigate = useNavigate();
+  const [joinCode, setJoinCode] = useState("");
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault(); // STOP native submission
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
 
-    const formData = new FormData(e.currentTarget);
-    const joinCode = formData.get("joinCode")?.toString();
+    if (!playerName.trim()) {
+      alert("Enter a player name");
+      return;
+    }
+    localStorage.setItem("playerName", playerName);
 
-    if (!joinCode) return;
+    if (!joinCode.trim()) return;
 
     try {
-      const res = await fetch(
-        `http://localhost:${import.meta.env.VITE_PORT}/api/session/${joinCode}`
-      );
-
-      if (!res.ok) {
-        alert("Invalid Session Id");
-        return;
-      }
-
+      await validateSession(joinCode);
       navigate(`/session/${joinCode}`);
-    } catch (err) {
-      alert("Error joining room");
-      console.error(err);
+    } catch {
+      alert("Invalid Session Id");
     }
   }
 
   return (
     <form onSubmit={handleSubmit}>
-      <input name="joinCode" type="text" />
+      <input
+        value={joinCode}
+        placeholder="Room Code"
+        onChange={(e) => setJoinCode(e.target.value)}
+        type="text"
+      />
       <button type="submit">Join</button>
     </form>
   );
 }
 
 export default function HomePage() {
+  const [playerName, setPlayerName] = useState("");
+
   return (
     <>
       <h1>Judgement</h1>
+
       <div className="card">
-        <CreateRoomButton></CreateRoomButton>
-        <JoinRoomForm></JoinRoomForm>
+        <input
+          type="text"
+          placeholder="Player Name"
+          value={playerName}
+          onChange={(e) => setPlayerName(e.target.value)}
+        />
+        <CreateRoomForm playerName={playerName} />
+        <JoinRoomForm playerName={playerName} />
       </div>
     </>
   );

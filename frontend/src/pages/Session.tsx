@@ -1,23 +1,24 @@
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-// import { useEffect, useState, type SetStateAction } from "react";
 import { useSessionValidation } from "../hooks/useSessionValidation";
+import SessionSocket from "../components/SessionSocket";
 
 export default function SessionPage() {
-  const { sessionId } = useParams();
   const navigate = useNavigate();
 
-  // const [currentPlayers, setCurrentPlayers] = useState();
+  const { sessionId } = useParams();
   const { valid, loading } = useSessionValidation(sessionId, navigate);
 
-  if (loading) return <p> Validating Session</p>;
+  const playerName = localStorage.getItem("playerName") || "";
 
-  if (!valid) {
-    return <Navigate to="/" />;
-  }
+  if (loading) return <p>Validating session...</p>;
+  if (!valid) return <Navigate to="/" />;
+  if (!sessionId) return <Navigate to="/" />;
 
   return (
     <>
       <h2>Session ID: {sessionId}</h2>
+      <h3>Welcome player: {playerName}</h3>
+      <SessionSocket sessionId={sessionId} playerName={playerName} />
     </>
   );
 }
