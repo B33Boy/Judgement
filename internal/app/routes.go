@@ -35,6 +35,6 @@ func (a *App) RegisterRoutes() http.Handler {
 func (a *App) HealthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"status": "ok",
+		"Status": "Connection Healthy",
 	})
 }
