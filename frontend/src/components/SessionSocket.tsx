@@ -8,12 +8,12 @@ type ServerMessage =
   | { type: "game_started" }
   | { type: "error"; payload: { message: string } };
 
-interface Props {
+interface SessionInfo {
   sessionId: string;
   playerName: string;
 }
 
-export default function SessionSocket({ sessionId, playerName }: Props) {
+export default function SessionSocket({ sessionId, playerName }: SessionInfo) {
   const navigate = useNavigate();
   const wsRef = useRef<WebSocket | null>(null);
   const [players, setPlayers] = useState<string[]>([]);

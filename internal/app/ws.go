@@ -40,35 +40,32 @@ func (a *App) wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	player := NewPlayer(playerName, conn)
 	session.AddPlayer(player)
-
 	broadcastPlayers(session)
 
 	for {
 		var msg Message
 		if err := wsjson.Read(r.Context(), conn, &msg); err != nil {
-			session.mu.Lock()
-			delete(session.Players, playerName)
-			session.mu.Unlock()
+			session.RemovePlayer(player.PlayerName)
 			broadcastPlayers(session)
 			return
 		}
 
-		if msg.Type == "start_game" {
-			session.mu.Lock()
-			session.Started = true
-			session.mu.Unlock()
-			broadcastGameStarted(session)
+		switch msg.Type {
+		case "start_game":
+			if !session.Started {
+				session.Started = true
+				broadcastGameStarted(session)
+			}
 		}
 	}
 }
 
 func broadcastPlayers(session *Session) {
-	session.mu.Lock()
-	defer session.mu.Unlock()
+	players := session.CopyPlayerList()
 
-	names := make([]string, 0, len(session.Players))
-	for name := range session.Players {
-		names = append(names, name)
+	names := make([]string, 0, len(players))
+	for _, p := range players {
+		names = append(names, p.PlayerName)
 	}
 
 	msg := Message{
@@ -76,24 +73,25 @@ func broadcastPlayers(session *Session) {
 		PlayerNames: names,
 	}
 
-	for name, player := range session.Players {
-		if err := wsjson.Write(context.Background(), player.Conn, msg); err != nil {
-			player.Conn.CloseNow()
-			delete(session.Players, name)
+	for _, p := range players {
+		if err := wsjson.Write(context.Background(), p.Conn, msg); err != nil {
+			p.Conn.CloseNow()
+			session.RemovePlayer(p.PlayerName)
 		}
 	}
 }
 
 func broadcastGameStarted(session *Session) {
-	session.mu.Lock()
-	defer session.mu.Unlock()
+	players := session.CopyPlayerList()
 
-	msg := Message{Type: "game_started"}
+	msg := Message{
+		Type: "game_started",
+	}
 
-	for name, player := range session.Players {
-		if err := wsjson.Write(context.Background(), player.Conn, msg); err != nil {
-			player.Conn.CloseNow()
-			delete(session.Players, name)
+	for _, p := range players {
+		if err := wsjson.Write(context.Background(), p.Conn, msg); err != nil {
+			p.Conn.CloseNow()
+			session.RemovePlayer(p.PlayerName)
 		}
 	}
 }

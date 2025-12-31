@@ -25,6 +25,39 @@ func (s *Session) AddPlayer(player *Player) {
 	s.Players[player.PlayerName] = player
 }
 
+func (s *Session) RemovePlayer(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.Players, name)
+}
+
+func (s *Session) CopyPlayerList() []*Player {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	players := make([]*Player, 0, len(s.Players))
+	for _, p := range s.Players {
+		players = append(players, p)
+	}
+	return players
+}
+
+// func (s *Session) DeletePlayers(playersToDisconnect []*Player) {
+// 	s.mu.Lock()
+// 	defer s.mu.Unlock()
+
+// 	for _, p := range playersToDisconnect {
+// 		delete(s.Players, p.PlayerName)
+// 	}
+// }
+
+func (s *Session) Start() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.Started = true
+}
+
 // ==================================================
 
 type SessionStore struct {
