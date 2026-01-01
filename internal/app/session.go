@@ -8,7 +8,7 @@ import (
 type Session struct {
 	ID      string             `json:"sessionId"`
 	Players map[string]*Player `json:"players"`
-	Started bool
+	Started bool               `json:"started"`
 	mu      sync.Mutex
 }
 
@@ -41,15 +41,6 @@ func (s *Session) CopyPlayerList() []*Player {
 	}
 	return players
 }
-
-// func (s *Session) DeletePlayers(playersToDisconnect []*Player) {
-// 	s.mu.Lock()
-// 	defer s.mu.Unlock()
-
-// 	for _, p := range playersToDisconnect {
-// 		delete(s.Players, p.PlayerName)
-// 	}
-// }
 
 func (s *Session) Start() {
 	s.mu.Lock()

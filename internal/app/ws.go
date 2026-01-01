@@ -53,7 +53,7 @@ func (a *App) wsHandler(w http.ResponseWriter, r *http.Request) {
 		switch msg.Type {
 		case "start_game":
 			if !session.Started {
-				session.Started = true
+				session.Start()
 				broadcastGameStarted(session)
 			}
 		}
