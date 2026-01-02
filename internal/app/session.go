@@ -45,7 +45,9 @@ func (s *Session) CopyPlayerList() []*Player {
 func (s *Session) Start() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-
+	if s.Started {
+		return
+	}
 	s.Started = true
 }
 

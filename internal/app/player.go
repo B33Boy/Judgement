@@ -9,14 +9,12 @@ import (
 
 type Player struct {
 	PlayerName string `json:"playerName"`
-	Score      int    `json:"score"`
 	Conn       *websocket.Conn
 }
 
 func NewPlayer(playerName string, conn *websocket.Conn) *Player {
 	return &Player{
 		PlayerName: playerName,
-		Score:      0,
 		Conn:       conn,
 	}
 }

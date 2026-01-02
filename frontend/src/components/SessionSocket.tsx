@@ -3,10 +3,10 @@ import { useNavigate } from "react-router-dom";
 
 const WS_BASE = `ws://localhost:${import.meta.env.VITE_PORT}`;
 
-type ServerMessage =
-  | { type: "players_update"; players: string[] }
-  | { type: "game_started" }
-  | { type: "error"; payload: { message: string } };
+interface EnvelopeMessage {
+  type: "players_update" | "game_started" | "error";
+  payload?: any;
+}
 
 interface SessionInfo {
   sessionId: string;
@@ -24,10 +24,10 @@ export default function SessionSocket({ sessionId, playerName }: SessionInfo) {
     );
 
     ws.onmessage = (e) => {
-      const msg = JSON.parse(e.data) as ServerMessage;
+      const msg = JSON.parse(e.data) as EnvelopeMessage;
 
       if (msg.type === "players_update") {
-        setPlayers(msg.players);
+        setPlayers(msg.payload.players ?? []);
       }
 
       if (msg.type === "game_started") {
@@ -35,7 +35,7 @@ export default function SessionSocket({ sessionId, playerName }: SessionInfo) {
       }
 
       if (msg.type === "error") {
-        alert(msg.payload.message);
+        alert(msg.payload?.message);
         navigate("/");
       }
     };

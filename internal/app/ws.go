@@ -2,17 +2,13 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 )
-
-type Message struct {
-	Type        string   `json:"type"`
-	PlayerNames []string `json:"players,omitempty"`
-}
 
 func (a *App) wsHandler(w http.ResponseWriter, r *http.Request) {
 	sessionId := r.URL.Query().Get("sessionId")
@@ -39,28 +35,34 @@ func (a *App) wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	player := NewPlayer(playerName, conn)
-	session.AddPlayer(player)
-	broadcastPlayers(session)
+	onPlayerJoin(r.Context(), session, player)
+	defer onPlayerLeave(r.Context(), session, player)
 
 	for {
-		var msg Message
-		if err := wsjson.Read(r.Context(), conn, &msg); err != nil {
-			session.RemovePlayer(player.PlayerName)
-			broadcastPlayers(session)
+		var env Envelope
+		if err := wsjson.Read(r.Context(), conn, &env); err != nil {
+			log.Println("ws read failed:", err)
 			return
 		}
 
-		switch msg.Type {
-		case "start_game":
-			if !session.Started {
-				session.Start()
-				broadcastGameStarted(session)
-			}
+		if err := dispatchMessage(r.Context(), session, player, env); err != nil {
+			log.Println("dispatch failed:", err)
+			return
 		}
 	}
 }
 
-func broadcastPlayers(session *Session) {
+func onPlayerJoin(ctx context.Context, session *Session, player *Player) {
+	session.AddPlayer(player)
+	broadcastPlayers(ctx, session)
+}
+
+func onPlayerLeave(ctx context.Context, session *Session, player *Player) {
+	session.RemovePlayer(player.PlayerName)
+	broadcastPlayers(ctx, session)
+}
+
+func broadcastPlayers(ctx context.Context, session *Session) {
 	players := session.CopyPlayerList()
 
 	names := make([]string, 0, len(players))
@@ -68,30 +70,58 @@ func broadcastPlayers(session *Session) {
 		names = append(names, p.PlayerName)
 	}
 
-	msg := Message{
-		Type:        "players_update",
-		PlayerNames: names,
-	}
-
 	for _, p := range players {
-		if err := wsjson.Write(context.Background(), p.Conn, msg); err != nil {
+		if err := Send(
+			ctx,
+			p.Conn,
+			MsgPlayersUpdate,
+			PlayersUpdatePayload{PlayerNames: names},
+		); err != nil {
 			p.Conn.CloseNow()
 			session.RemovePlayer(p.PlayerName)
 		}
 	}
 }
 
-func broadcastGameStarted(session *Session) {
-	players := session.CopyPlayerList()
-
-	msg := Message{
-		Type: "game_started",
+func broadcastGameStarted(ctx context.Context, session *Session) {
+	for _, p := range session.CopyPlayerList() {
+		Send(ctx, p.Conn, MsgGameStarted, struct{}{})
 	}
+}
 
-	for _, p := range players {
-		if err := wsjson.Write(context.Background(), p.Conn, msg); err != nil {
-			p.Conn.CloseNow()
-			session.RemovePlayer(p.PlayerName)
+func dispatchMessage(ctx context.Context, session *Session, player *Player, env Envelope) error {
+	switch env.Type {
+	case MsgStartGame:
+		if session.Started {
+			return nil
 		}
+		session.Start()
+		broadcastGameStarted(ctx, session)
+
+	// case MsgMakeBid:
+	// 	var p MakeBidPayload
+	// 	if err := json.Unmarshal(env.Payload, &p); err != nil {
+	// 		return err
+	// 	}
+	// 	session.HandleBid(player, p.Amount)
+
+	default:
+		log.Printf("unknown message type: %s", env.Type)
 	}
+
+	return nil
+}
+
+// ================= Send Abstraction =================
+
+func Send(ctx context.Context, conn *websocket.Conn, t MessageType, payload any) error {
+	b, err := json.Marshal(payload)
+	if err != nil {
+		log.Println("Can't marshal the payload!")
+		return err
+	}
+	return wsjson.Write(ctx, conn, Envelope{
+		Type:    t,
+		Payload: b,
+	})
 }
