@@ -71,7 +71,7 @@ func broadcastPlayers(ctx context.Context, session *Session) {
 	}
 
 	for _, p := range players {
-		if err := Send(
+		if err := send(
 			ctx,
 			p.Conn,
 			MsgPlayersUpdate,
@@ -85,25 +85,20 @@ func broadcastPlayers(ctx context.Context, session *Session) {
 
 func broadcastGameStarted(ctx context.Context, session *Session) {
 	for _, p := range session.CopyPlayerList() {
-		Send(ctx, p.Conn, MsgGameStarted, struct{}{})
+		send(ctx, p.Conn, MsgGameStarted, GameStartedPayload{})
 	}
 }
 
 func dispatchMessage(ctx context.Context, session *Session, player *Player, env Envelope) error {
 	switch env.Type {
 	case MsgStartGame:
-		if session.Started {
+		if success := session.Start(ctx); !success {
 			return nil
 		}
-		session.Start()
 		broadcastGameStarted(ctx, session)
 
-	// case MsgMakeBid:
-	// 	var p MakeBidPayload
-	// 	if err := json.Unmarshal(env.Payload, &p); err != nil {
-	// 		return err
-	// 	}
-	// 	session.HandleBid(player, p.Amount)
+	case MsgMakeBid, MsgPlayCard:
+		session.actions <- Action{Player: player, Message: env}
 
 	default:
 		log.Printf("unknown message type: %s", env.Type)
@@ -114,7 +109,7 @@ func dispatchMessage(ctx context.Context, session *Session, player *Player, env 
 
 // ================= Send Abstraction =================
 
-func Send(ctx context.Context, conn *websocket.Conn, t MessageType, payload any) error {
+func send(ctx context.Context, conn *websocket.Conn, t MessageType, payload any) error {
 	b, err := json.Marshal(payload)
 	if err != nil {
 		log.Println("Can't marshal the payload!")
