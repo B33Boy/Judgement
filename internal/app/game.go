@@ -1,14 +1,13 @@
 package app
 
 import (
-	"encoding/json"
 	"math/rand"
 )
 
 // ======================== Deck ========================
 type Deck []string
 
-func NewDeck() Deck {
+func newDeck() Deck {
 	cards := make(Deck, 52)
 	cardIdx := 0
 
@@ -21,7 +20,7 @@ func NewDeck() Deck {
 	return cards
 }
 
-func ShuffleDeck(cards Deck) {
+func shuffleDeck(cards Deck) {
 	for i := range cards {
 		j := rand.Intn(i + 1)
 		cards[i], cards[j] = cards[j], cards[i]
@@ -47,16 +46,6 @@ func distributeCards(deck Deck, playerCnt int) []Deck {
 }
 
 // ======================== Game ========================
-type GameInput struct {
-	Player  string
-	Type    MessageType
-	Payload json.RawMessage
-}
-
-type GameEvent struct {
-	Type    MessageType
-	Payload any
-}
 
 type GamePlayer struct {
 	PlayerName string
@@ -64,11 +53,61 @@ type GamePlayer struct {
 	Cards      Deck
 }
 
-type Game struct {
-	Players []*GamePlayer
-	Turn    int
+type GameInput struct {
+	Player *Player
+	Env    Envelope
+}
 
-	inputs chan GameInput
-	events chan GameEvent
+type Game struct {
+	emit    func(Envelope)
+	Players []*GamePlayer
+	Round   int
 	// state  GameState
+}
+
+func NewGame(session *Session) *Game {
+	session.mu.Lock()
+	defer session.mu.Unlock()
+
+	deck := newDeck()
+	shuffleDeck(deck)
+
+	playerCnt := len(session.Players)
+	cards := distributeCards(deck, playerCnt)
+
+	gamePlayers := make([]*GamePlayer, 0, playerCnt)
+
+	i := 0
+	for name := range session.Players {
+		gamePlayers = append(gamePlayers, &GamePlayer{
+			PlayerName: name,
+			Score:      0,
+			Cards:      cards[i],
+		})
+		i++
+	}
+
+	return &Game{
+		emit: func(env Envelope) {
+			select {
+			case session.outputs <- env:
+			case <-session.ctx.Done():
+			}
+		},
+		Players: gamePlayers,
+		Round:   0,
+	}
+}
+
+func (g *Game) Start() {
+	// setup game and run state machine
+	g.emit(Envelope{Type: MsgGameStarted})
+
+}
+
+func (g *Game) HandleGameInput(input GameInput) {
+	// Take input and parse it to an appropriate message
+	// perform message action
+	// But the message output pipe is contained within the session and the game shouldn't have access to the session
+
 }

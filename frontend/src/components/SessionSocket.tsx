@@ -47,7 +47,7 @@ export default function SessionSocket({ sessionId, playerName }: SessionInfo) {
   }, [sessionId, playerName, navigate]);
 
   function startGame() {
-    wsRef.current?.send(JSON.stringify({ type: "start_game" }));
+    wsRef.current?.send(JSON.stringify({ type: "start_game", payload: "" }));
   }
 
   return (

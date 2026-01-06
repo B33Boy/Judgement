@@ -1,8 +1,8 @@
 package app
 
 import (
-	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 
@@ -26,7 +26,6 @@ func (a *App) wsHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("websocket accept failed:", err)
 		return
 	}
-	defer conn.Close(websocket.StatusNormalClosure, "")
 
 	session, exists := a.sessionStore.GetSession(sessionId)
 	if !exists {
@@ -35,9 +34,38 @@ func (a *App) wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	player := NewPlayer(playerName, conn)
-	onPlayerJoin(r.Context(), session, player)
-	defer onPlayerLeave(r.Context(), session, player)
 
+	defer func() {
+		player.cancel() // stops write loop
+		conn.Close(websocket.StatusNormalClosure, "")
+	}()
+
+	onPlayerJoin(session, player)
+	defer onPlayerLeave(session, player)
+
+	// ====== Write Loop ======
+	go func() {
+		for {
+			select {
+			case <-player.ctx.Done():
+				log.Printf("Player %v exited!", player.PlayerName)
+				return
+			case <-session.ctx.Done():
+				log.Printf("[write loop] Closed session %v", session.ID)
+				return
+			case env, ok := <-player.Send:
+				if !ok {
+					return
+				}
+				if err := wsjson.Write(r.Context(), conn, env); err != nil {
+					log.Println("write to websocket failed:", err)
+					return
+				}
+			}
+		}
+	}()
+
+	// ====== Read Loop ======
 	for {
 		var env Envelope
 		if err := wsjson.Read(r.Context(), conn, &env); err != nil {
@@ -45,24 +73,26 @@ func (a *App) wsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if err := dispatchMessage(r.Context(), session, player, env); err != nil {
-			log.Println("dispatch failed:", err)
+		if err := handleIncomingMessage(session, player, env); err != nil {
 			return
 		}
 	}
+
 }
 
-func onPlayerJoin(ctx context.Context, session *Session, player *Player) {
+func onPlayerJoin(session *Session, player *Player) {
 	session.AddPlayer(player)
-	broadcastPlayers(ctx, session)
+	broadcastPlayersUpdate(session)
+	log.Printf("Player (%v) added to session (%v)\n", player.PlayerName, session.ID)
 }
 
-func onPlayerLeave(ctx context.Context, session *Session, player *Player) {
+func onPlayerLeave(session *Session, player *Player) {
+	log.Printf("Player (%v) left session (%v)\n", player.PlayerName, session.ID)
 	session.RemovePlayer(player.PlayerName)
-	broadcastPlayers(ctx, session)
+	broadcastPlayersUpdate(session)
 }
 
-func broadcastPlayers(ctx context.Context, session *Session) {
+func broadcastPlayersUpdate(session *Session) {
 	players := session.CopyPlayerList()
 
 	names := make([]string, 0, len(players))
@@ -70,53 +100,33 @@ func broadcastPlayers(ctx context.Context, session *Session) {
 		names = append(names, p.PlayerName)
 	}
 
-	for _, p := range players {
-		if err := send(
-			ctx,
-			p.Conn,
-			MsgPlayersUpdate,
-			PlayersUpdatePayload{PlayerNames: names},
-		); err != nil {
-			p.Conn.CloseNow()
-			session.RemovePlayer(p.PlayerName)
-		}
+	env := Envelope{
+		Type:    MsgPlayersUpdate,
+		Payload: mustMarshal(PlayersUpdatePayload{PlayerNames: names}),
+	}
+
+	select {
+	case session.outputs <- env:
+	case <-session.ctx.Done():
+		log.Printf("[broadcastPlayersUpdate] Closed session %v", session.ID)
 	}
 }
 
-func broadcastGameStarted(ctx context.Context, session *Session) {
-	for _, p := range session.CopyPlayerList() {
-		send(ctx, p.Conn, MsgGameStarted, GameStartedPayload{})
+func handleIncomingMessage(session *Session, player *Player, env Envelope) error {
+	select {
+	case session.inputs <- GameInput{Player: player, Env: env}:
+		return nil
+
+	case <-session.ctx.Done():
+		log.Printf("[handleIncomingMessage] Closed session %v", session.ID)
+		return errors.New("session closed")
 	}
 }
 
-func dispatchMessage(ctx context.Context, session *Session, player *Player, env Envelope) error {
-	switch env.Type {
-	case MsgStartGame:
-		if success := session.Start(ctx); !success {
-			return nil
-		}
-		broadcastGameStarted(ctx, session)
-
-	case MsgMakeBid, MsgPlayCard:
-		session.actions <- Action{Player: player, Message: env}
-
-	default:
-		log.Printf("unknown message type: %s", env.Type)
-	}
-
-	return nil
-}
-
-// ================= Send Abstraction =================
-
-func send(ctx context.Context, conn *websocket.Conn, t MessageType, payload any) error {
-	b, err := json.Marshal(payload)
+func mustMarshal(v any) []byte {
+	b, err := json.Marshal(v)
 	if err != nil {
-		log.Println("Can't marshal the payload!")
-		return err
+		log.Panicf("marshal failed: %v", err)
 	}
-	return wsjson.Write(ctx, conn, Envelope{
-		Type:    t,
-		Payload: b,
-	})
+	return b
 }

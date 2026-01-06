@@ -1,6 +1,8 @@
 package app
 
 import (
+	"context"
+	"log"
 	"math/rand"
 	"sync"
 )
@@ -8,27 +10,65 @@ import (
 type Session struct {
 	ID      string             `json:"sessionId"`
 	Players map[string]*Player `json:"players"`
-	Started bool               `json:"started"`
-	mu      sync.Mutex
+
+	inputs  chan GameInput
+	outputs chan Envelope
+
+	game *Game
+
+	ctx    context.Context
+	cancel context.CancelFunc
+
+	mu sync.Mutex
 }
 
 func NewSession(sessionId string) *Session {
-	return &Session{
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	s := &Session{
 		ID:      sessionId,
 		Players: make(map[string]*Player),
+
+		inputs:  make(chan GameInput, 32),
+		outputs: make(chan Envelope, 32),
+
+		game:   nil,
+		ctx:    ctx,
+		cancel: cancel,
 	}
+
+	go s.run()
+
+	return s
 }
 
 func (s *Session) AddPlayer(player *Player) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	// Prevent duplicate players by kicking out old one first
+	if old, ok := s.Players[player.PlayerName]; ok {
+		old.cancel()
+		close(old.Send)
+	}
+
 	s.Players[player.PlayerName] = player
 }
 
 func (s *Session) RemovePlayer(name string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	delete(s.Players, name)
+
+	if player, ok := s.Players[name]; ok {
+		player.cancel()    // stop the write loop
+		close(player.Send) // close outbound channel
+		delete(s.Players, name)
+
+		if len(s.Players) == 0 {
+			s.cancel()
+		}
+	}
 }
 
 func (s *Session) CopyPlayerList() []*Player {
@@ -42,16 +82,51 @@ func (s *Session) CopyPlayerList() []*Player {
 	return players
 }
 
-func (s *Session) Start() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.Started {
-		return
+func (s *Session) run() {
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+
+		case input := <-s.inputs:
+			s.handleInput(input)
+
+		case output := <-s.outputs:
+			s.handleOutput(output)
+		}
 	}
-	s.Started = true
 }
 
-// ==================================================
+func (s *Session) handleInput(input GameInput) {
+	switch input.Env.Type {
+	case MsgStartGame:
+		if s.game != nil {
+			return // already started
+		}
+		s.game = NewGame(s)
+		s.game.Start()
+	default:
+		if s.game == nil {
+			return
+		}
+		s.game.HandleGameInput(input)
+	}
+}
+
+func (s *Session) handleOutput(env Envelope) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	for name, player := range s.Players {
+		select {
+		case player.Send <- env:
+			// success
+		default:
+			// slow client, drop or disconnect
+			log.Println("Dropping message for slow player:", name)
+		}
+	}
+}
 
 type SessionStore struct {
 	sessions map[string]*Session

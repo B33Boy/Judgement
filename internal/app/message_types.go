@@ -8,15 +8,13 @@ import (
 type MessageType string
 
 const (
-	// Session-level
-	MsgPlayersUpdate MessageType = "players_update"
-	MsgStartGame     MessageType = "start_game"
+	MsgPlayersUpdate MessageType = "players_update" // BE -> FE
+	MsgStartGame     MessageType = "start_game"     // FE -> BE
+	MsgGameStarted   MessageType = "game_started"   // BE -> FE
 
-	// Game-level
-	MsgGameStarted MessageType = "game_started"
-	MsgGameEnd     MessageType = "game_end"
-	MsgMakeBid     MessageType = "make_bid"
-	MsgPlayCard    MessageType = "play_card"
+	MsgGameEnd  MessageType = "game_end"  // BE -> FE
+	MsgMakeBid  MessageType = "make_bid"  // FE -> BE
+	MsgPlayCard MessageType = "play_card" // FE -> BE
 )
 
 type Envelope struct {
