@@ -7,12 +7,14 @@ import (
 	"sync"
 )
 
+type PlayerID string
+
 type Session struct {
-	ID      string             `json:"sessionId"`
-	Players map[string]*Player `json:"players"`
+	ID      string               `json:"sessionId"`
+	Players map[PlayerID]*Player `json:"players"`
 
 	inputs  chan GameInput
-	outputs chan Envelope
+	outputs chan GameOutput
 
 	game *Game
 
@@ -28,10 +30,10 @@ func NewSession(sessionId string) *Session {
 
 	s := &Session{
 		ID:      sessionId,
-		Players: make(map[string]*Player),
+		Players: make(map[PlayerID]*Player),
 
 		inputs:  make(chan GameInput, 32),
-		outputs: make(chan Envelope, 32),
+		outputs: make(chan GameOutput, 32),
 
 		game:   nil,
 		ctx:    ctx,
@@ -48,22 +50,22 @@ func (s *Session) AddPlayer(player *Player) {
 	defer s.mu.Unlock()
 
 	// Prevent duplicate players by kicking out old one first
-	if old, ok := s.Players[player.PlayerName]; ok {
+	if old, ok := s.Players[player.ID]; ok {
 		old.cancel()
 		close(old.Send)
 	}
 
-	s.Players[player.PlayerName] = player
+	s.Players[player.ID] = player
 }
 
-func (s *Session) RemovePlayer(name string) {
+func (s *Session) RemovePlayer(player *Player) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if player, ok := s.Players[name]; ok {
+	if player, ok := s.Players[player.ID]; ok {
 		player.cancel()    // stop the write loop
 		close(player.Send) // close outbound channel
-		delete(s.Players, name)
+		delete(s.Players, player.ID)
 
 		if len(s.Players) == 0 {
 			s.cancel()
@@ -113,17 +115,24 @@ func (s *Session) handleInput(input GameInput) {
 	}
 }
 
-func (s *Session) handleOutput(env Envelope) {
+func (s *Session) handleOutput(output GameOutput) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for name, player := range s.Players {
+	log.Println("===> DEBUGGING HERE!")
+
+	// Route outputs to the specific players given in output
+	for _, id := range output.Players {
+
+		// Get Player from id common to Player and GamePlayer
+		player := s.Players[id]
+
 		select {
-		case player.Send <- env:
+		case player.Send <- output.Env:
 			// success
 		default:
 			// slow client, drop or disconnect
-			log.Println("Dropping message for slow player:", name)
+			log.Println("Dropping message for slow player with ID:", id)
 		}
 	}
 }

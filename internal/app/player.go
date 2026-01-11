@@ -4,10 +4,12 @@ import (
 	"context"
 
 	"github.com/coder/websocket"
+	"github.com/google/uuid"
 )
 
 type Player struct {
-	PlayerName string `json:"playerName"`
+	ID         PlayerID `json:"id"`
+	PlayerName string   `json:"playerName"`
 	Conn       *websocket.Conn
 	Send       chan Envelope
 	ctx        context.Context
@@ -18,6 +20,7 @@ func NewPlayer(playerName string, conn *websocket.Conn) *Player {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &Player{
+		ID:         PlayerID(uuid.NewString()),
 		PlayerName: playerName,
 		Conn:       conn,
 		Send:       make(chan Envelope, 100),

@@ -69,7 +69,16 @@ func (a *App) wsHandler(w http.ResponseWriter, r *http.Request) {
 	for {
 		var env Envelope
 		if err := wsjson.Read(r.Context(), conn, &env); err != nil {
-			log.Println("ws read failed:", err)
+
+			status := websocket.CloseStatus(err)
+
+			switch status {
+			case websocket.StatusNormalClosure, websocket.StatusGoingAway:
+				log.Printf("player %s disconnected", player.PlayerName)
+
+			default:
+				log.Printf("ws read error (%s): %v", player.PlayerName, err)
+			}
 			return
 		}
 
@@ -88,25 +97,31 @@ func onPlayerJoin(session *Session, player *Player) {
 
 func onPlayerLeave(session *Session, player *Player) {
 	log.Printf("Player (%v) left session (%v)\n", player.PlayerName, session.ID)
-	session.RemovePlayer(player.PlayerName)
+	session.RemovePlayer(player)
 	broadcastPlayersUpdate(session)
 }
 
 func broadcastPlayersUpdate(session *Session) {
 	players := session.CopyPlayerList()
 
-	names := make([]string, 0, len(players))
+	all_names := make([]string, 0, len(players))
+	all_ids := make([]PlayerID, 0, len(players))
+
 	for _, p := range players {
-		names = append(names, p.PlayerName)
+		all_names = append(all_names, p.PlayerName)
+		all_ids = append(all_ids, p.ID)
 	}
 
-	env := Envelope{
-		Type:    MsgPlayersUpdate,
-		Payload: mustMarshal(PlayersUpdatePayload{PlayerNames: names}),
+	out := GameOutput{
+		Players: all_ids,
+		Env: Envelope{
+			Type:    MsgPlayersUpdate,
+			Payload: mustMarshal(PlayersUpdatePayload{PlayerNames: all_names}),
+		},
 	}
 
 	select {
-	case session.outputs <- env:
+	case session.outputs <- out:
 	case <-session.ctx.Done():
 		log.Printf("[broadcastPlayersUpdate] Closed session %v", session.ID)
 	}

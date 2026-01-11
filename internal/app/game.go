@@ -48,6 +48,7 @@ func distributeCards(deck Deck, playerCnt int) []Deck {
 // ======================== Game ========================
 
 type GamePlayer struct {
+	ID         PlayerID
 	PlayerName string
 	Score      int
 	Cards      Deck
@@ -58,9 +59,14 @@ type GameInput struct {
 	Env    Envelope
 }
 
+type GameOutput struct {
+	Players []PlayerID
+	Env     Envelope
+}
+
 type Game struct {
-	emit    func(Envelope)
-	Players []*GamePlayer
+	emit    func(GameOutput)
+	Players map[PlayerID]*GamePlayer
 	Round   int
 	// state  GameState
 }
@@ -75,22 +81,23 @@ func NewGame(session *Session) *Game {
 	playerCnt := len(session.Players)
 	cards := distributeCards(deck, playerCnt)
 
-	gamePlayers := make([]*GamePlayer, 0, playerCnt)
+	gamePlayers := make(map[PlayerID]*GamePlayer)
 
 	i := 0
-	for name := range session.Players {
-		gamePlayers = append(gamePlayers, &GamePlayer{
-			PlayerName: name,
+	for playerID, player := range session.Players {
+		gamePlayers[playerID] = &GamePlayer{
+			ID:         playerID,
+			PlayerName: player.PlayerName,
 			Score:      0,
 			Cards:      cards[i],
-		})
+		}
 		i++
 	}
 
 	return &Game{
-		emit: func(env Envelope) {
+		emit: func(out GameOutput) {
 			select {
-			case session.outputs <- env:
+			case session.outputs <- out:
 			case <-session.ctx.Done():
 			}
 		},
@@ -100,9 +107,11 @@ func NewGame(session *Session) *Game {
 }
 
 func (g *Game) Start() {
-	// setup game and run state machine
-	g.emit(Envelope{Type: MsgGameStarted})
-
+	out := GameOutput{
+		Players: g.allPlayerIDs(),
+		Env:     Envelope{Type: MsgGameStarted},
+	}
+	g.emit(out)
 }
 
 func (g *Game) HandleGameInput(input GameInput) {
@@ -110,4 +119,15 @@ func (g *Game) HandleGameInput(input GameInput) {
 	// perform message action
 	// But the message output pipe is contained within the session and the game shouldn't have access to the session
 
+}
+
+func (g *Game) allPlayerIDs() []PlayerID {
+
+	all_ids := make([]PlayerID, 0, len(g.Players))
+
+	for id := range g.Players {
+		all_ids = append(all_ids, id)
+	}
+
+	return all_ids
 }
