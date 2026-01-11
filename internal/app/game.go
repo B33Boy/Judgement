@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"math/rand"
 )
 
@@ -79,7 +80,7 @@ func NewGame(session *Session) *Game {
 	shuffleDeck(deck)
 
 	playerCnt := len(session.Players)
-	cards := distributeCards(deck, playerCnt)
+	decks := distributeCards(deck, playerCnt)
 
 	gamePlayers := make(map[PlayerID]*GamePlayer)
 
@@ -89,7 +90,7 @@ func NewGame(session *Session) *Game {
 			ID:         playerID,
 			PlayerName: player.PlayerName,
 			Score:      0,
-			Cards:      cards[i],
+			Cards:      decks[i],
 		}
 		i++
 	}
@@ -107,17 +108,21 @@ func NewGame(session *Session) *Game {
 }
 
 func (g *Game) Start() {
-	out := GameOutput{
+	g.emit(GameOutput{
 		Players: g.allPlayerIDs(),
 		Env:     Envelope{Type: MsgGameStarted},
+	})
+
+	// Send cards to each player
+	// This will update the cards on each players end
+	for _, id := range g.allPlayerIDs() {
+		g.sendCardsToPlayer(id)
 	}
-	g.emit(out)
 }
 
 func (g *Game) HandleGameInput(input GameInput) {
 	// Take input and parse it to an appropriate message
 	// perform message action
-	// But the message output pipe is contained within the session and the game shouldn't have access to the session
 
 }
 
@@ -130,4 +135,19 @@ func (g *Game) allPlayerIDs() []PlayerID {
 	}
 
 	return all_ids
+}
+
+func (g *Game) sendCardsToPlayer(playerID PlayerID) {
+	player := g.Players[playerID]
+	payload, _ := json.Marshal(player.Cards)
+
+	out := GameOutput{
+		Players: []PlayerID{player.ID},
+		Env: Envelope{
+			Type:    MsgPlayersUpdate,
+			Payload: payload,
+		},
+	}
+
+	g.emit(out)
 }
