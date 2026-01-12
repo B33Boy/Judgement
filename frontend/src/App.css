@@ -40,3 +40,20 @@
 .read-the-docs {
   color: #888;
 }
+
+.player-list ul {
+  list-style-type: none;
+}
+
+.player-list li {
+  border: 1px solid white;
+  margin: 5px;
+  padding: 10px;
+}
+
+.player-list-game li {
+  border: 1px solid white;
+  margin: 5px;
+  padding: 10px;
+  list-style-type: none;
+}

@@ -1,22 +1,41 @@
-import { Navigate, useParams } from "react-router-dom";
-import { useSessionValidation } from "../hooks/useSessionValidation";
+import { useEffect } from "react";
+import { useParams, Navigate } from "react-router-dom";
 import { getPlayerName } from "../lib/player";
-import SessionSocket from "../components/SessionSocket";
+import { useGame } from "../context/GameContext";
 
 export default function SessionPage() {
   const { sessionId } = useParams();
-  const { valid, loading } = useSessionValidation(sessionId);
-
-  if (loading) return <p>Validating session...</p>;
-  if (!valid || !sessionId) return <Navigate to="/" />;
-
+  const { connect, players, sendMessage } = useGame();
   const playerName = getPlayerName();
 
+  // If no ID or name, go home
+  if (!sessionId || !playerName) return <Navigate to="/" />;
+
+  useEffect(() => {
+    connect(sessionId, playerName);
+  }, [sessionId, playerName, connect]);
+
+  const handleStartGame = () => {
+    sendMessage("start_game");
+  };
+
   return (
-    <>
-      <h2>Session {sessionId}</h2>
-      <h3>Welcome {playerName}</h3>
-      <SessionSocket sessionId={sessionId} playerName={playerName} />
-    </>
+    <div>
+      <h2>Session: {sessionId}</h2>
+      <h3>Lobby</h3>
+
+      <div className="player-list">
+        <h4>Players ({players.length})</h4>
+        <ul>
+          {players.map((p) => (
+            <li key={p}>{p}</li>
+          ))}
+        </ul>
+      </div>
+
+      <button disabled={players.length < 2} onClick={handleStartGame}>
+        Start Game
+      </button>
+    </div>
   );
 }

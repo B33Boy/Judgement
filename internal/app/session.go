@@ -119,8 +119,6 @@ func (s *Session) handleOutput(output GameOutput) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	log.Println("===> DEBUGGING HERE!")
-
 	// Route outputs to the specific players given in output
 	for _, id := range output.Players {
 

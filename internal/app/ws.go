@@ -38,10 +38,8 @@ func (a *App) wsHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		player.cancel() // stops write loop
 		conn.Close(websocket.StatusNormalClosure, "")
+		onPlayerLeave(session, player)
 	}()
-
-	onPlayerJoin(session, player)
-	defer onPlayerLeave(session, player)
 
 	// ====== Write Loop ======
 	go func() {
@@ -64,6 +62,8 @@ func (a *App) wsHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}()
+
+	onPlayerJoin(session, player)
 
 	// ====== Read Loop ======
 	for {

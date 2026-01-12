@@ -12,9 +12,10 @@ const (
 	MsgStartGame     MessageType = "start_game"     // FE -> BE
 	MsgGameStarted   MessageType = "game_started"   // BE -> FE
 
-	MsgGameEnd  MessageType = "game_end"  // BE -> FE
-	MsgMakeBid  MessageType = "make_bid"  // FE -> BE
-	MsgPlayCard MessageType = "play_card" // FE -> BE
+	MsgPlayerHand MessageType = "player_hand" // BE -> FE
+	MsgGameEnd    MessageType = "game_end"    // BE -> FE
+	MsgMakeBid    MessageType = "make_bid"    // FE -> BE
+	MsgPlayCard   MessageType = "play_card"   // FE -> BE
 )
 
 type Envelope struct {

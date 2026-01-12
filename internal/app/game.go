@@ -139,12 +139,14 @@ func (g *Game) allPlayerIDs() []PlayerID {
 
 func (g *Game) sendCardsToPlayer(playerID PlayerID) {
 	player := g.Players[playerID]
-	payload, _ := json.Marshal(player.Cards)
+	payload, _ := json.Marshal(PlayerHandChange{
+		Cards: player.Cards,
+	})
 
 	out := GameOutput{
 		Players: []PlayerID{player.ID},
 		Env: Envelope{
-			Type:    MsgPlayersUpdate,
+			Type:    MsgPlayerHand,
 			Payload: payload,
 		},
 	}
