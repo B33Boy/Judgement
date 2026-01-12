@@ -1,12 +1,14 @@
 package app
 
 import (
+	"context"
 	"encoding/json"
 	"math/rand"
 )
 
 // ======================== Deck ========================
 type Deck []string
+type Hand []string
 
 func newDeck() Deck {
 	cards := make(Deck, 52)
@@ -28,8 +30,8 @@ func shuffleDeck(cards Deck) {
 	}
 }
 
-func distributeCards(deck Deck, playerCnt int) []Deck {
-	playerHands := make([]Deck, playerCnt)
+func distributeCards(deck Deck, playerCnt int) []Hand {
+	playerHands := make([]Hand, playerCnt)
 	cardsPerPlayer := len(deck) / playerCnt
 
 	for i := range playerCnt {
@@ -41,7 +43,7 @@ func distributeCards(deck Deck, playerCnt int) []Deck {
 			end = len(deck)
 		}
 
-		playerHands[i] = append(Deck(nil), deck[start:end]...)
+		playerHands[i] = Hand(append(Deck(nil), deck[start:end]...))
 	}
 	return playerHands
 }
@@ -52,7 +54,7 @@ type GamePlayer struct {
 	ID         PlayerID
 	PlayerName string
 	Score      int
-	Cards      Deck
+	Cards      Hand
 }
 
 type GameInput struct {
@@ -64,23 +66,20 @@ type GameOutput struct {
 	Players []PlayerID
 	Env     Envelope
 }
-
 type Game struct {
+	ctx     context.Context
+	cancel  context.CancelFunc
 	emit    func(GameOutput)
 	Players map[PlayerID]*GamePlayer
 	Round   int
-	// state  GameState
 }
 
 func NewGame(session *Session) *Game {
 	session.mu.Lock()
 	defer session.mu.Unlock()
 
-	deck := newDeck()
-	shuffleDeck(deck)
-
 	playerCnt := len(session.Players)
-	decks := distributeCards(deck, playerCnt)
+	hands := getHands(playerCnt)
 
 	gamePlayers := make(map[PlayerID]*GamePlayer)
 
@@ -90,12 +89,15 @@ func NewGame(session *Session) *Game {
 			ID:         playerID,
 			PlayerName: player.PlayerName,
 			Score:      0,
-			Cards:      decks[i],
+			Cards:      hands[i],
 		}
 		i++
 	}
 
+	ctx, cancel := context.WithCancel(session.ctx)
 	return &Game{
+		ctx:    ctx,
+		cancel: cancel,
 		emit: func(out GameOutput) {
 			select {
 			case session.outputs <- out:
@@ -107,22 +109,24 @@ func NewGame(session *Session) *Game {
 	}
 }
 
+func getHands(playerCount int) []Hand {
+	deck := newDeck()
+	shuffleDeck(deck)
+	return distributeCards(deck, playerCount)
+}
+
 func (g *Game) Start() {
 	g.emit(GameOutput{
 		Players: g.allPlayerIDs(),
 		Env:     Envelope{Type: MsgGameStarted},
 	})
 
-	// Send cards to each player
-	// This will update the cards on each players end
 	for _, id := range g.allPlayerIDs() {
 		g.sendCardsToPlayer(id)
 	}
 }
 
 func (g *Game) HandleGameInput(input GameInput) {
-	// Take input and parse it to an appropriate message
-	// perform message action
 
 }
 

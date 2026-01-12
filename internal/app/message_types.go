@@ -32,5 +32,5 @@ type PlayersUpdatePayload struct {
 type StartGamePayload struct{}
 
 type PlayerHandChange struct {
-	Cards Deck `json:"cards"`
+	Cards Hand `json:"cards"`
 }
