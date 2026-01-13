@@ -33,7 +33,10 @@ export default function SessionPage() {
         </ul>
       </div>
 
-      <button disabled={players.length < 2} onClick={handleStartGame}>
+      <button
+        disabled={players.length < 3 || players.length > 7}
+        onClick={handleStartGame}
+      >
         Start Game
       </button>
     </div>
