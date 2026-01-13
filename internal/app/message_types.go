@@ -13,9 +13,11 @@ const (
 	MsgGameStarted   MessageType = "game_started"   // BE -> FE
 
 	MsgPlayerHand MessageType = "player_hand" // BE -> FE
-	MsgGameEnd    MessageType = "game_end"    // BE -> FE
-	MsgMakeBid    MessageType = "make_bid"    // FE -> BE
-	MsgPlayCard   MessageType = "play_card"   // FE -> BE
+	MsgRoundInfo  MessageType = "round_info"  // BE -> FE
+
+	MsgGameEnd  MessageType = "game_end"  // BE -> FE
+	MsgMakeBid  MessageType = "make_bid"  // FE -> BE
+	MsgPlayCard MessageType = "play_card" // FE -> BE
 )
 
 type Envelope struct {
@@ -29,8 +31,12 @@ type PlayersUpdatePayload struct {
 	PlayerNames []string `json:"players"`
 }
 
-type StartGamePayload struct{}
-
-type PlayerHandChange struct {
+type PlayerHandChangePayload struct {
 	Cards Hand `json:"cards"`
+}
+
+type RoundInfoPayload struct {
+	Round      int      `json:"round"`
+	TurnPlayer PlayerID `json:"playerId"`
+	State      State    `json:"state"`
 }
