@@ -36,7 +36,7 @@ type PlayerHandChangePayload struct {
 }
 
 type RoundInfoPayload struct {
-	Round      int      `json:"round"`
+	Round      round    `json:"round"`
 	TurnPlayer PlayerID `json:"playerId"`
 	State      State    `json:"state"`
 }
