@@ -42,11 +42,6 @@ func distributeCards(deck Deck, playerCnt int) []Hand {
 		start := i * cardsPerPlayer
 		end := start + cardsPerPlayer
 
-		// last player gets remaining cards
-		if i == playerCnt-1 {
-			end = len(deck)
-		}
-
 		playerHands[i] = Hand(append(Deck(nil), deck[start:end]...))
 	}
 	return playerHands
