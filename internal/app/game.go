@@ -57,7 +57,7 @@ func distributeCards(deck Deck, playerCnt int) []Hand {
 type GamePlayer struct {
 	ID         PlayerID
 	PlayerName string
-	Score      int
+	Bid        *bid
 	Cards      Hand
 }
 
@@ -114,16 +114,27 @@ const (
 	StateGameOver   State = "gameover"
 
 	// Events
-	BiddingDone   Event = "bidding_done"
-	PlayingDone   Event = "playing_done"
-	RoundResolved Event = "round_resolved"
+	BiddingDone     Event = "bidding_done"
+	PlayingContinue Event = "playing_continue"
+	PlayingDone     Event = "playing_done"
+	RoundResolved   Event = "round_resolved"
 )
+
+// ======================== Scoreboard ========================
+
+type round int
+type score int
+type bid int
+
+type PlayerScore map[PlayerID][]score
+
+// type PlayerBid map[PlayerID][]bid
 
 // ======================== Game ========================
 
 type GameParams struct {
-	round         int
-	maxRounds     int
+	round         round
+	maxRounds     round
 	cardsPerRound int
 }
 
@@ -136,6 +147,7 @@ type Game struct {
 	params     *GameParams
 	cycler     *PlayerCycler
 	sm         *StateMachine
+	scores     PlayerScore
 }
 
 type PlayerCycler struct {
@@ -154,17 +166,6 @@ func NewPlayerCycler(m PlayerMap) *PlayerCycler {
 		index: 0,
 	}
 }
-
-// func (pc *PlayerCycler) getCurrentPlayerID() (PlayerID, error) {
-// 	if len(pc.keys) == 0 {
-// 		return PlayerID(""), errors.New("0 players to cycle through")
-// 	}
-
-// 	playerID := pc.keys[pc.index]
-// 	pc.index = (pc.index + 1) % len(pc.keys)
-
-// 	return playerID, nil
-// }
 
 func (pc *PlayerCycler) Next() (PlayerID, error) {
 	if len(pc.keys) == 0 {
@@ -191,6 +192,7 @@ func NewGame(session *Session) *Game {
 	playerCnt := len(session.Players)
 	hands := getHands(playerCnt)
 
+	// Game Players
 	gamePlayers := make(PlayerMap)
 
 	i := 0
@@ -198,20 +200,33 @@ func NewGame(session *Session) *Game {
 		gamePlayers[playerID] = &GamePlayer{
 			ID:         playerID,
 			PlayerName: player.PlayerName,
-			Score:      0,
+			Bid:        nil,
 			Cards:      hands[i],
 		}
 		i++
 	}
 
-	gameParams := &GameParams{
+	// Params
+	params := &GameParams{
 		round:         0,
 		maxRounds:     14,
 		cardsPerRound: 7,
 	}
 
+	// Cycler
 	cycler := NewPlayerCycler(gamePlayers)
 	firstPlayerID, _ := cycler.Next()
+
+	// State Machine
+	sm := NewStateMachine(StateBid)
+
+	sm.AddTransition(StateBid, BiddingDone, StatePlay)
+	sm.AddTransition(StatePlay, PlayingDone, StateResolution)
+	sm.AddTransition(StateResolution, PlayingContinue, StateBid)
+	sm.AddTransition(StateResolution, PlayingDone, StateGameOver)
+
+	// Scores
+	scores := NewScoreboard(playerCnt, gamePlayers, params.maxRounds)
 
 	ctx, cancel := context.WithCancel(session.ctx)
 	return &Game{
@@ -225,9 +240,10 @@ func NewGame(session *Session) *Game {
 		},
 		Players:    gamePlayers,
 		turnPlayer: firstPlayerID,
-		params:     gameParams,
+		params:     params,
 		cycler:     cycler,
-		sm:         NewStateMachine(StateBid),
+		sm:         sm,
+		scores:     scores,
 	}
 }
 
@@ -235,6 +251,13 @@ func getHands(playerCount int) []Hand {
 	deck := newDeck()
 	shuffleDeck(deck)
 	return distributeCards(deck, playerCount)
+}
+func NewScoreboard(playerCnt int, gamePlayers PlayerMap, maxRounds round) PlayerScore {
+	scores := make(PlayerScore, playerCnt)
+	for playerId := range gamePlayers {
+		scores[playerId] = make([]score, maxRounds)
+	}
+	return scores
 }
 
 func (g *Game) Start() {
@@ -323,6 +346,10 @@ func (g *Game) HandleGameInput(input GameInput) {
 }
 
 func (g *Game) handleBid(input GameInput) {
+	if input.Env.Type != MsgMakeBid {
+		log.Println("Invalid message type, \"make_bid\" expected")
+		return
+	}
 
 	curPlayer := g.Players[input.Player.ID]
 	if curPlayer.ID != g.turnPlayer {
@@ -330,21 +357,58 @@ func (g *Game) handleBid(input GameInput) {
 		return
 	}
 
+	g.recordBid(curPlayer, input)
+
+	g.turnPlayer = g.cyclePlayer()
+
+	if g.allPlayersBid() {
+		g.sm.Trigger(BiddingDone)
+		g.updateRound()
+	}
+	g.sendRoundInfo()
+}
+
+func (g *Game) recordBid(curPlayer *GamePlayer, input GameInput) {
+
+	var payload MakeBid
+	err := json.Unmarshal(input.Env.Payload, &payload)
+
+	if err != nil {
+		log.Println("Cannot unmarshall MakeBid")
+		return
+	}
+
+	// Logic to check if bid is possible
+	// If not possible send message back
+
+	curPlayer.Bid = &payload.Bid
+}
+
+func (g *Game) allPlayersBid() bool {
+	for _, player := range g.Players {
+		if player.Bid == nil {
+			return false
+		}
+	}
+	return true
 }
 
 func (g *Game) handlePlay(input GameInput) {
-
+	// player actions
+	// 1) play card 2) reveal sir card
 }
 
 func (g *Game) handleResolution(input GameInput) {
-
+	// Update scores and send to frontend
 }
 
 func (g *Game) updateRound() {
+	// Run this after every player turn, it will only update round when we return back to first player
 	completed := g.cycler.completedCycle()
-	if completed {
-		g.params.round++
+	if !completed {
+		return
 	}
+	g.params.round++
 
 	if g.params.round > g.params.maxRounds {
 		// state change to finished game

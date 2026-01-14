@@ -40,3 +40,7 @@ type RoundInfoPayload struct {
 	TurnPlayer PlayerID `json:"playerId"`
 	State      State    `json:"state"`
 }
+
+type MakeBid struct {
+	Bid bid `json:"bid"`
+}
