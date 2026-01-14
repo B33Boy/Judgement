@@ -314,7 +314,7 @@ func (g *Game) cyclePlayer() PlayerID {
 func (g *Game) sendRoundInfo() {
 	payload, _ := json.Marshal(RoundInfoPayload{
 		Round:      g.params.round,
-		TurnPlayer: g.turnPlayer,
+		TurnPlayer: g.Players[g.turnPlayer].PlayerName,
 		State:      g.sm.state,
 	})
 

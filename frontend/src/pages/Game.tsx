@@ -4,7 +4,7 @@ import { useGame } from "../context/GameContext";
 
 export default function GamePage() {
   const { sessionId, playerName } = useParams();
-  const { isConnected, players, hand, connect } = useGame();
+  const { isConnected, players, hand, roundInfo, connect } = useGame();
 
   if (!sessionId || !playerName) {
     return <Navigate to="/" />;
@@ -40,8 +40,11 @@ export default function GamePage() {
 
       <hr />
       <section>
-        <h3>Your Hand</h3>
-        <div style={{ display: "flex", gap: "15%", flexWrap: "wrap" }}>
+        {<h3>{playerName}'s Hand</h3>}
+        <div
+          className="playerHand"
+          style={{ display: "flex", gap: "15%", flexWrap: "wrap" }}
+        >
           {hand.length > 0 ? (
             hand.map((card, index) => (
               <div key={index} className="card-item">
@@ -50,6 +53,17 @@ export default function GamePage() {
             ))
           ) : (
             <p>Waiting for cards...</p>
+          )}
+        </div>
+        <div className="roundInfo">
+          {roundInfo ? (
+            <div>
+              <p>Round: {roundInfo.round}</p>
+              <p>Turn: {roundInfo.turnPlayer}</p>
+              <p>State: {roundInfo.state}</p>
+            </div>
+          ) : (
+            <p>Waiting for round info</p>
           )}
         </div>
       </section>

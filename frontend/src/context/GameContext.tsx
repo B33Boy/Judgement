@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import type { WSEnvelope } from "../types";
+import type { WSEnvelope, RoundInfo } from "../types";
 
 const WS_BASE = `ws://localhost:${import.meta.env.VITE_PORT}`;
 
@@ -15,6 +15,7 @@ interface GameContextType {
   isConnected: boolean;
   players: string[];
   hand: string[];
+  roundInfo: RoundInfo | null;
   connect: (sessionId: string, playerName: string) => void;
   disconnect: () => void;
   sendMessage: (type: WSEnvelope["type"], payload?: any) => void;
@@ -27,6 +28,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [isConnected, setIsConnected] = useState(false);
   const [players, setPlayers] = useState<string[]>([]);
   const [hand, setHand] = useState<string[]>([]);
+  const [roundInfo, setRoundInfo] = useState<RoundInfo | null>(null);
 
   // Refs
   const currentPlayerRef = useRef<string>("");
@@ -69,6 +71,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
             setHand(msg.payload.cards ?? []);
             break;
 
+          case "round_info":
+            console.log("Round Info: ", msg.payload);
+            const payload = msg.payload as RoundInfo;
+            setRoundInfo(payload);
+            break;
+
           case "error":
             alert(msg.payload.message);
             break;
@@ -93,7 +101,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   return (
     <GameContext.Provider
-      value={{ isConnected, players, hand, connect, disconnect, sendMessage }}
+      value={{
+        isConnected,
+        players,
+        hand,
+        roundInfo,
+        connect,
+        disconnect,
+        sendMessage,
+      }}
     >
       {children}
     </GameContext.Provider>

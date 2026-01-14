@@ -9,10 +9,17 @@ export interface WSEnvelope {
     | "game_started"
     | "error"
     | "start_game"
-    | "player_hand";
+    | "player_hand"
+    | "round_info";
   payload?: any;
 }
 
 export interface PlayerState {
   players: string[];
+}
+
+export interface RoundInfo {
+  round: number;
+  turnPlayer: string;
+  state: string;
 }
