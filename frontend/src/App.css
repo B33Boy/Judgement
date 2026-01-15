@@ -57,3 +57,8 @@
   padding: 10px;
   list-style-type: none;
 }
+
+.card-image {
+  width: 96px;
+  height: auto;
+}

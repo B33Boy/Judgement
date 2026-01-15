@@ -48,7 +48,6 @@ export default function GamePage() {
           {hand.length > 0 ? (
             hand.map((card, index) => (
               <div key={index} className="card-item">
-                {/* <span>{card.replace("_", " ")}</span> */}
                 <Card code={card} />
               </div>
             ))
@@ -73,5 +72,5 @@ export default function GamePage() {
 }
 
 function Card({ code }: { code: string }) {
-  return <img src={`/cards/${code}.svg`} alt={code} />;
+  return <img className="card-image" src={`/cards/${code}.svg`} alt={code} />;
 }
