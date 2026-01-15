@@ -18,9 +18,9 @@ func newDeck() Deck {
 	cards := make(Deck, 52)
 	cardIdx := 0
 
-	for _, suit := range []string{"♠", "♥", "♦", "♣"} {
-		for _, rank := range []string{"2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K", "A"} {
-			cards[cardIdx] = rank + "_" + suit
+	for _, suit := range []string{"SPADE", "HEART", "DIAMOND", "CLUB"} {
+		for _, rank := range []string{"2", "3", "4", "5", "6", "7", "8", "9", "10", "JACK", "QUEEN", "KING", "ACE"} {
+			cards[cardIdx] = suit + "-" + rank
 			cardIdx++
 		}
 	}
