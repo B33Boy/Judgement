@@ -18,18 +18,23 @@ export default function GamePage() {
     }
   }, [sessionId, playerName, isConnected, connect]);
 
+  const isBiddingTurn =
+    roundInfo?.state === "bidding" && roundInfo?.turnPlayer === playerName;
+
+  const isPlaying = roundInfo?.state === "playing";
+
   return (
     <div>
       <h1>Judgement</h1>
       <p>Session: {sessionId}</p>
 
+      <h3>Current Player: {playerName}</h3>
       <PlayerList players={players} />
       <PlayerHand hand={hand} />
       <RoundData roundInfo={roundInfo} />
 
-      {roundInfo?.turnPlayer === playerName && (
-        <BidBox msgFunction={sendMessage} />
-      )}
+      {isBiddingTurn && <BidBox msgFunction={sendMessage} />}
+      {isPlaying && <Table players={players} />}
     </div>
   );
 }
@@ -119,6 +124,25 @@ function BidBox({ msgFunction }: BidBoxProps) {
       <button disabled={bidVal === null} onClick={handleBid}>
         Submit Bid
       </button>
+    </div>
+  );
+}
+
+function Table({ players }: { players: string[] }) {
+  return (
+    <div className="table">
+      {players.map((p) => (
+        <TableEntry key={p} player={p} />
+      ))}
+    </div>
+  );
+}
+
+function TableEntry({ player }: { player: string }) {
+  return (
+    <div className="table-entry-container">
+      <p className="player-name">{player}</p>
+      <div className="table-entry"></div>
     </div>
   );
 }

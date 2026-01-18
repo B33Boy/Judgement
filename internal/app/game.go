@@ -389,7 +389,8 @@ func (g *Game) allPlayersBid() bool {
 }
 
 func (g *Game) handlePlay(input GameInput) {
-	// player actions
+	// get a list of player cards bundled along with names
+	// get a struct of
 	// 1) play card 2) reveal sir card
 }
 
