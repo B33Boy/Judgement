@@ -62,3 +62,22 @@
   width: 96px;
   height: auto;
 }
+
+.player-hand {
+  display: flex;
+  flex-wrap: nowrap;
+}
+
+.card-item {
+  padding-left: 1%;
+}
+
+.bid-box {
+  border: 1px solid white;
+}
+
+.bid-buttons.button:hover,
+.bid-buttons.button:active,
+.bid-buttons.button:focus {
+  color: white;
+}

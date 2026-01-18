@@ -10,7 +10,8 @@ export interface WSEnvelope {
     | "error"
     | "start_game"
     | "player_hand"
-    | "round_info";
+    | "round_info"
+    | "make_bid";
   payload?: any;
 }
 

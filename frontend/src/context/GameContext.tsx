@@ -11,6 +11,8 @@ import type { WSEnvelope, RoundInfo } from "../types";
 
 const WS_BASE = `ws://localhost:${import.meta.env.VITE_PORT}`;
 
+export type MessageHandler = (type: WSEnvelope["type"], payload?: any) => void;
+
 interface GameContextType {
   isConnected: boolean;
   players: string[];
@@ -18,7 +20,7 @@ interface GameContextType {
   roundInfo: RoundInfo | null;
   connect: (sessionId: string, playerName: string) => void;
   disconnect: () => void;
-  sendMessage: (type: WSEnvelope["type"], payload?: any) => void;
+  sendMessage: MessageHandler;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -43,7 +45,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       // Create new ws conn
       const ws = new WebSocket(
-        `${WS_BASE}/ws?sessionId=${sessionId}&playerName=${playerName}`
+        `${WS_BASE}/ws?sessionId=${sessionId}&playerName=${playerName}`,
       );
 
       ws.onopen = () => setIsConnected(true);
@@ -85,7 +87,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
       wsRef.current = ws;
     },
-    [navigate]
+    [navigate],
   );
 
   const disconnect = useCallback(() => {
