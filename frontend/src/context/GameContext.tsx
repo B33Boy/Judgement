@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import type { WSEnvelope, RoundInfo } from "../types";
+import type { WSEnvelope, RoundInfo, Scores } from "../types";
 
 const WS_BASE = `ws://localhost:${import.meta.env.VITE_PORT}`;
 
@@ -18,6 +18,7 @@ interface GameContextType {
   players: string[];
   hand: string[];
   roundInfo: RoundInfo | null;
+  scores: Scores | null;
   connect: (sessionId: string, playerName: string) => void;
   disconnect: () => void;
   sendMessage: MessageHandler;
@@ -31,6 +32,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [players, setPlayers] = useState<string[]>([]);
   const [hand, setHand] = useState<string[]>([]);
   const [roundInfo, setRoundInfo] = useState<RoundInfo | null>(null);
+  const [scores, setScores] = useState<Scores | null>(null);
 
   // Refs
   const currentPlayerRef = useRef<string>("");
@@ -108,6 +110,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         players,
         hand,
         roundInfo,
+        scores,
         connect,
         disconnect,
         sendMessage,

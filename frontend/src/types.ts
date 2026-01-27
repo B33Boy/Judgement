@@ -24,3 +24,5 @@ export interface RoundInfo {
   turnPlayer: string;
   state: string;
 }
+
+export type Scores = Map<string, number[]>;

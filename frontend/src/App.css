@@ -33,6 +33,23 @@
   }
 }
 
+/* =======================
+   Global Variables
+   ======================= */
+:root {
+  --card-width: 100px;
+  --card-height: calc(var(--card-width) * 1.4);
+}
+
+/* =======================
+   General Elements
+   ======================= */
+h1,
+h3,
+p {
+  margin: 0.25rem 0;
+}
+
 .card {
   padding: 2em;
 }
@@ -41,39 +58,59 @@
   color: #888;
 }
 
-.player-list ul {
+/* =======================
+   Player List
+   ======================= */
+.player-list ul,
+.player-list-game li {
   list-style-type: none;
 }
 
-.player-list li {
-  border: 1px solid white;
-  margin: 5px;
-  padding: 10px;
-}
-
+.player-list li,
 .player-list-game li {
   border: 1px solid white;
   margin: 5px;
   padding: 10px;
-  list-style-type: none;
 }
 
-.card-image {
-  width: 96px;
-  height: auto;
-}
-
+/* =======================
+   Player Hand
+   ======================= */
 .player-hand {
   display: flex;
+  justify-content: center;
   flex-wrap: nowrap;
+  gap: 2px;
 }
 
 .card-item {
   padding-left: 1%;
 }
 
+.card-image {
+  width: var(--card-width);
+  height: var(--card-height);
+  border: 1px solid black;
+}
+
+/* =======================
+   Bid Box
+   ======================= */
 .bid-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
   border: 1px solid white;
+}
+
+.bid-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.bid-buttons button.selected {
+  font-weight: bold;
 }
 
 .bid-buttons.button:hover,
@@ -82,15 +119,14 @@
   color: white;
 }
 
-:root {
-  --card-width: 100px;
-  --card-height: calc(var(--card-width) * 1.4);
-}
-
+/* =======================
+   Table
+   ======================= */
 .table {
   display: flex;
-  gap: 16px;
+  gap: 1rem;
   justify-content: center;
+  flex-wrap: wrap;
 
   border: 2px solid #ccc;
   border-radius: 8px;
@@ -102,6 +138,7 @@
   flex-direction: column; /* stack vertically */
   align-items: center; /* center horizontally */
   gap: 8px; /* space between name and card */
+  text-align: center;
 }
 
 .table-entry {
@@ -112,4 +149,81 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.table-entry-container.current-turn {
+  outline: 3px solid #4caf50;
+  border-radius: 8px;
+}
+
+.table-entry-container.current-turn .player-name {
+  font-weight: bold;
+  color: #4caf50;
+}
+
+/* =======================
+   Session Box
+   ======================= */
+.session-box {
+  flex: 0 0 auto;
+  border: 1px solid white;
+  padding: 10px;
+}
+
+/* =======================
+   Game Layout Grid
+   ======================= */
+.game-layout {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  grid-template-areas:
+    "title   round"
+    "session round"
+    "score   action"
+    ".       hand";
+  gap: 0.75rem;
+  padding-right: 5rem;
+  padding-left: 0.5rem;
+  align-items: start;
+  border: 5px solid white;
+  background-color: #242424;
+  min-width: 900px;
+}
+
+.title {
+  grid-area: title;
+}
+
+.session {
+  grid-area: session;
+}
+
+.round {
+  grid-area: round;
+  justify-self: center;
+}
+
+.score {
+  grid-area: score;
+}
+
+.action {
+  grid-area: action;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.hand {
+  grid-area: hand;
+  justify-self: center;
+}
+
+/* =======================
+   Info Boxes (Session & Round)
+   ======================= */
+.session-box,
+.roundInfo {
+  padding: 0.5rem;
+  font-size: 0.9rem;
 }
