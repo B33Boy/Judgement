@@ -3,6 +3,9 @@
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
+
+  background-color: var(--color-bg);
+  color: var(--color-text-primary);
 }
 
 .logo {
@@ -37,8 +40,20 @@
    Global Variables
    ======================= */
 :root {
+  /* Layout */
   --card-width: 100px;
   --card-height: calc(var(--card-width) * 1.4);
+
+  /* Color palette */
+  --color-bg: #000000;
+  --color-surface: #47464d;
+  --color-surface-light: #f6f6f6;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #47464d;
+  --color-accent: #fb742d;
+
+  --color-border-light: #ffffff;
+  --color-border-muted: #ccc;
 }
 
 /* =======================
@@ -54,10 +69,6 @@ p {
   padding: 2em;
 }
 
-.read-the-docs {
-  color: #888;
-}
-
 /* =======================
    Player List
    ======================= */
@@ -68,7 +79,7 @@ p {
 
 .player-list li,
 .player-list-game li {
-  border: 1px solid white;
+  border: 1px solid var(--color-border-light);
   margin: 5px;
   padding: 10px;
 }
@@ -90,7 +101,8 @@ p {
 .card-image {
   width: var(--card-width);
   height: var(--card-height);
-  border: 1px solid black;
+  border: 1px solid var(--color-bg);
+  background-color: var(--color-text-primary);
 }
 
 /* =======================
@@ -111,6 +123,7 @@ p {
 
 .bid-buttons button.selected {
   font-weight: bold;
+  color: var(--color-accent);
 }
 
 .bid-buttons.button:hover,
@@ -131,7 +144,8 @@ p {
   border: 2px solid #ccc;
   border-radius: 8px;
   padding: 5%;
-  background-color: #47464d;
+  background-color: var(--color-surface);
+  border-color: var(--color-border-muted);
 }
 
 .table-entry-container {
@@ -153,13 +167,13 @@ p {
 }
 
 .table-entry-container.current-turn .table-entry {
-  outline: 3px solid #fb742d;
+  outline: 3px solid var(--color-accent);
   border-radius: 8px;
 }
 
 .table-entry-container.current-turn .player-name {
   font-weight: bold;
-  color: #fb742d;
+  color: var(--color-accent);
 }
 
 /* =======================
@@ -186,8 +200,8 @@ p {
   padding-right: 5rem;
   padding-left: 0.5rem;
   align-items: start;
-  border: 5px solid white;
-  background-color: #000000;
+  border: 5px solid var(--color-border-light);
+  background-color: var(--color-bg);
 
   min-width: 900px;
 }
@@ -206,7 +220,9 @@ p {
   grid-area: round;
   justify-self: center;
   margin-top: 2em;
-  background-color: #f6f6f6;
+  background-color: var(--color-surface-light);
+  color: var(--color-text-secondary);
+  border: 1px solid white;
 }
 
 .score {
@@ -225,8 +241,8 @@ p {
   justify-self: center;
   padding: 5%;
   margin-bottom: 20px;
-  border: 5px solid #ccc;
-  background-color: #47464d;
+  border: 5px solid var(--color-border-muted);
+  background-color: var(--color-surface);
 }
 
 /* =======================
