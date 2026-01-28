@@ -146,8 +146,10 @@ type Game struct {
 }
 
 type PlayerCycler struct {
-	keys  []PlayerID
-	index int
+	keys       []PlayerID
+	index      int
+	startIndex int
+	started    bool
 }
 
 func NewPlayerCycler(m PlayerMap) *PlayerCycler {
@@ -157,27 +159,42 @@ func NewPlayerCycler(m PlayerMap) *PlayerCycler {
 		keys = append(keys, playerID)
 	}
 	return &PlayerCycler{
-		keys:  keys,
-		index: 0,
+		keys:       keys,
+		index:      0,
+		startIndex: 0,
+		started:    false,
 	}
+}
+
+func (pc *PlayerCycler) StartFrom(player PlayerID) error {
+	for i, id := range pc.keys {
+		if id == player {
+			pc.index = i
+			pc.startIndex = i
+			pc.started = false
+			return nil
+		}
+	}
+	return errors.New("player not found")
 }
 
 func (pc *PlayerCycler) Next() (PlayerID, error) {
 	if len(pc.keys) == 0 {
-		return PlayerID(""), errors.New("0 players to cycle through")
+		return "", errors.New("0 players to cycle through")
 	}
 
 	playerID := pc.keys[pc.index]
 	pc.index = (pc.index + 1) % len(pc.keys)
+	pc.started = true
 
 	return playerID, nil
 }
 
-func (pc *PlayerCycler) completedCycle() bool {
-	if len(pc.keys) == 0 {
+func (pc *PlayerCycler) CompletedCycle() bool {
+	if len(pc.keys) == 0 || !pc.started {
 		return false
 	}
-	return pc.index == 0
+	return pc.index == pc.startIndex
 }
 
 func NewGame(session *Session) *Game {
@@ -347,8 +364,7 @@ func (g *Game) handleBid(input GameInput) {
 	}
 
 	curPlayer := g.Players[input.Player.ID]
-	if curPlayer.ID != g.turnPlayer {
-		log.Printf("It is %s's turn!\n", g.Players[g.turnPlayer].PlayerName)
+	if g.verifyPlayerTurn(curPlayer) != nil {
 		return
 	}
 
@@ -361,6 +377,14 @@ func (g *Game) handleBid(input GameInput) {
 		g.updateRound()
 	}
 	g.sendRoundInfo()
+}
+
+func (g *Game) verifyPlayerTurn(player *GamePlayer) error {
+	if player.ID != g.turnPlayer {
+		log.Printf("It is %s's turn!\n", g.Players[g.turnPlayer].PlayerName)
+		return errors.New("Incorrect player turn")
+	}
+	return nil
 }
 
 func (g *Game) recordBid(curPlayer *GamePlayer, input GameInput) {
@@ -389,9 +413,30 @@ func (g *Game) allPlayersBid() bool {
 }
 
 func (g *Game) handlePlay(input GameInput) {
-	// get a list of player cards bundled along with names
+	// receive played card, send rejection message if not possible to play
 	// get a struct of
 	// 1) play card 2) reveal sir card
+
+	if input.Env.Type != MsgPlayCard {
+		log.Println("Invalid message type, \"make_bid\" expected")
+		return
+	}
+
+	curPlayer := g.Players[input.Player.ID]
+	if g.verifyPlayerTurn(curPlayer) != nil {
+		return
+	}
+
+	// check if card is valid
+	// Play card
+
+	g.turnPlayer = g.cyclePlayer()
+
+	// if g.allPlayersPlayedCard() {
+	// 	g.sm.Trigger(PlayingDone)
+	// 	g.updateRound()
+	// }
+	g.sendRoundInfo()
 }
 
 func (g *Game) handleResolution(input GameInput) {
@@ -400,7 +445,7 @@ func (g *Game) handleResolution(input GameInput) {
 
 func (g *Game) updateRound() {
 	// Run this after every player turn, it will only update round when we return back to first player
-	completed := g.cycler.completedCycle()
+	completed := g.cycler.CompletedCycle()
 	if !completed {
 		return
 	}
