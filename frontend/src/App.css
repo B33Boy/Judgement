@@ -74,7 +74,7 @@ p {
 }
 
 /* =======================
-   Player Hand
+   Player hand
    ======================= */
 .player-hand {
   display: flex;
@@ -131,6 +131,7 @@ p {
   border: 2px solid #ccc;
   border-radius: 8px;
   padding: 5%;
+  background-color: #47464d;
 }
 
 .table-entry-container {
@@ -151,14 +152,14 @@ p {
   justify-content: center;
 }
 
-.table-entry-container.current-turn {
-  outline: 3px solid #4caf50;
+.table-entry-container.current-turn .table-entry {
+  outline: 3px solid #fb742d;
   border-radius: 8px;
 }
 
 .table-entry-container.current-turn .player-name {
   font-weight: bold;
-  color: #4caf50;
+  color: #fb742d;
 }
 
 /* =======================
@@ -186,7 +187,8 @@ p {
   padding-left: 0.5rem;
   align-items: start;
   border: 5px solid white;
-  background-color: #242424;
+  background-color: #000000;
+
   min-width: 900px;
 }
 
@@ -196,11 +198,15 @@ p {
 
 .session {
   grid-area: session;
+  background-color: #f6f6f6;
+  color: #47464d;
 }
 
 .round {
   grid-area: round;
   justify-self: center;
+  margin-top: 2em;
+  background-color: #f6f6f6;
 }
 
 .score {
@@ -217,13 +223,18 @@ p {
 .hand {
   grid-area: hand;
   justify-self: center;
+  padding: 5%;
+  margin-bottom: 20px;
+  border: 5px solid #ccc;
+  background-color: #47464d;
 }
 
 /* =======================
    Info Boxes (Session & Round)
    ======================= */
 .session-box,
-.roundInfo {
+.round-info {
   padding: 0.5rem;
-  font-size: 0.9rem;
+  font-size: 1rem;
+  color: #47464d;
 }

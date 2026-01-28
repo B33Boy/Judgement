@@ -59,25 +59,6 @@ export default function GamePage() {
   );
 }
 
-// function PlayerList({ players }: { players: string[] }) {
-//   return (
-//     <>
-//       {players.length === 0 ? (
-//         <p>Connecting to game...</p>
-//       ) : (
-//         <>
-//           <h3>Current Players</h3>
-//           <ul className="player-list-game">
-//             {players.map((p) => (
-//               <li key={p}>{p}</li>
-//             ))}
-//           </ul>
-//         </>
-//       )}
-//     </>
-//   );
-// }
-
 function PlayerHand({ hand }: { hand: string[] }) {
   return (
     <div className="player-hand">
@@ -100,7 +81,7 @@ function Card({ code }: { code: string }) {
 
 function RoundData({ roundInfo }: { roundInfo: RoundInfo | null }) {
   return (
-    <div className="roundInfo">
+    <div className="round-info">
       {roundInfo ? (
         <div>
           <p>Round: {roundInfo.round}</p>

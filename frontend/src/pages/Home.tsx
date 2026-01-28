@@ -47,7 +47,7 @@ export default function HomePage() {
         placeholder="Player Name"
         value={playerName}
         onChange={(e) => setPlayerName(e.target.value)}
-        maxLength={20}
+        maxLength={10}
       />
 
       <div className="actions">
