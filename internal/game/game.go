@@ -1,9 +1,9 @@
 package game
 
+// Main game
+
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"log"
 	"math/rand"
 	"time"
@@ -103,19 +103,6 @@ func NewGame(session SessionView) *Game {
 	}
 }
 
-func getHands(playerCount int) []Hand {
-	deck := newDeck()
-	shuffleDeck(deck)
-	return distributeCards(deck, playerCount)
-}
-func NewScoreboard(playerCnt int, gamePlayers PlayerMap, maxRounds Round) PlayerScore {
-	scores := make(PlayerScore, playerCnt)
-	for playerId := range gamePlayers {
-		scores[playerId] = make([]Score, maxRounds)
-	}
-	return scores
-}
-
 func (g *Game) Start() {
 
 	g.sendGameStarted()
@@ -128,66 +115,6 @@ func (g *Game) Start() {
 	g.sendRoundInfo()
 }
 
-func (g *Game) sendGameStarted() {
-	g.emit(t.GameOutput{
-		Players: g.allPlayerIDs(),
-		Env:     t.Envelope{Type: t.MsgGameStarted},
-	})
-}
-
-func (g *Game) allPlayerIDs() []t.PlayerID {
-
-	all_ids := make([]t.PlayerID, 0, len(g.Players))
-
-	for id := range g.Players {
-		all_ids = append(all_ids, id)
-	}
-
-	return all_ids
-}
-
-func (g *Game) sendCardsToPlayer(playerID t.PlayerID) {
-	player := g.Players[playerID]
-	payload, _ := json.Marshal(PlayerHandChangePayload{
-		Cards: player.Cards,
-	})
-
-	out := t.GameOutput{
-		Players: []t.PlayerID{player.ID},
-		Env: t.Envelope{
-			Type:    t.MsgPlayerHand,
-			Payload: payload,
-		},
-	}
-
-	g.emit(out)
-}
-
-func (g *Game) cyclePlayer() t.PlayerID {
-	startPlayerID, err := g.cycler.Next()
-	if err != nil {
-		log.Println("Cannot fetch current player, 0 players in session!")
-		g.cancel()
-	}
-	return startPlayerID
-}
-
-func (g *Game) sendRoundInfo() {
-	payload, _ := json.Marshal(RoundInfoPayload{
-		Round:      g.params.round,
-		TurnPlayer: g.Players[g.turnPlayer].PlayerName,
-		State:      g.sm.state,
-	})
-
-	g.emit(t.GameOutput{
-		Players: g.allPlayerIDs(),
-		Env: t.Envelope{
-			Type:    t.MsgRoundInfo,
-			Payload: payload,
-		},
-	})
-}
-
 func (g *Game) HandleGameInput(input t.GameInput) {
 	switch g.sm.state {
 	case StateBid:
@@ -198,140 +125,5 @@ func (g *Game) HandleGameInput(input t.GameInput) {
 
 	case StateResolution:
 		g.handleResolution(input)
-	}
-}
-
-func (g *Game) handleBid(input t.GameInput) {
-	if input.Env.Type != t.MsgMakeBid {
-		log.Println("Invalid message type, \"make_bid\" expected")
-		return
-	}
-
-	if input.Player.ID != g.turnPlayer {
-		log.Printf("It is %s's turn!\n", g.Players[g.turnPlayer].PlayerName)
-		return
-	}
-
-	curPlayer := g.Players[input.Player.ID]
-	g.recordBid(curPlayer, input)
-
-	g.turnPlayer = g.cyclePlayer()
-
-	if g.cycler.CompletedCycle() {
-		g.sm.Trigger(BiddingDone)
-	}
-
-	g.sendRoundInfo()
-}
-
-func (g *Game) verifyPlayerTurn(player *GamePlayer) error {
-	if player.ID != g.turnPlayer {
-		log.Printf("It is %s's turn!\n", g.Players[g.turnPlayer].PlayerName)
-		return errors.New("Incorrect player turn")
-	}
-	return nil
-}
-
-func (g *Game) recordBid(curPlayer *GamePlayer, input t.GameInput) {
-
-	var payload MakeBid
-	err := json.Unmarshal(input.Env.Payload, &payload)
-
-	if err != nil {
-		log.Println("Cannot unmarshall MakeBid")
-		return
-	}
-
-	// Logic to check if bid is possible
-	// If not possible send message back
-
-	curPlayer.Bid = &payload.Bid
-}
-
-func (g *Game) handlePlay(input t.GameInput) {
-	// receive played card, send rejection message if not possible to play
-	// get a struct of
-	// 1) play card
-	if input.Env.Type != t.MsgPlayCard {
-		log.Println("Invalid message type, \"make_bid\" expected")
-		return
-	}
-
-	curPlayer := g.Players[input.Player.ID]
-	if g.verifyPlayerTurn(curPlayer) != nil {
-		return
-	}
-
-	// check if card is valid
-	// Play card
-
-	g.turnPlayer = g.cyclePlayer()
-
-	// if g.allPlayersPlayedCard() {
-	// 	g.sm.Trigger(PlayingDone)
-	// 	g.updateRound()
-	// }
-	g.sendRoundInfo()
-}
-
-func (g *Game) handleResolution(input t.GameInput) {
-	// Update scores and send to frontend
-	// call StartFrom() to start from the winning player
-	// call UpdateRound() here
-	g.updateRound()
-}
-
-func (g *Game) updateRound() {
-	// Run this after every player turn, it will only update round when we return back to first player
-	completed := g.cycler.CompletedCycle()
-	if !completed {
-		log.Println("Player cycle not completed, not updating round yet")
-		return
-	}
-	g.params.round++
-
-	if g.params.round > g.params.maxRounds {
-		// state change to finished game
-		g.trigger(PlayingDone)
-	}
-}
-
-func (g *Game) sendGameFinished() {
-	g.emit(t.GameOutput{
-		Players: g.allPlayerIDs(),
-		Env: t.Envelope{
-			Type: t.MsgGameEnd,
-		},
-	})
-}
-
-func (g *Game) trigger(event Event) {
-	prev := g.sm.state
-	next, err := g.sm.Trigger(event)
-
-	if err != nil {
-		log.Printf("trigger state change failed: %v\n", err)
-		return
-	}
-
-	g.onStateChanged(prev, next)
-}
-
-func (g *Game) onStateChanged(from, to State) {
-	switch to {
-
-	case StateBid:
-		log.Println("StateBid")
-
-	case StatePlay:
-		g.cycler.StartFrom(g.turnPlayer)
-		log.Println("StatePlay")
-
-	case StateResolution:
-		log.Println("StateResolution")
-
-	case StateGameOver:
-		log.Println("StateGameOver")
-		g.sendGameFinished()
 	}
 }

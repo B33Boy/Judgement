@@ -3,7 +3,6 @@ package game
 import t "github.com/B33Boy/Judgement/internal/types"
 
 // ================= Game Logic =================
-type Hand []string
 type PlayerMap map[t.PlayerID]*GamePlayer
 
 type GamePlayer struct {

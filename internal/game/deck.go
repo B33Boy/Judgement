@@ -3,6 +3,7 @@ package game
 import "math/rand"
 
 type Deck []string
+type Hand []string
 
 func newDeck() Deck {
 	cards := make(Deck, 52)
@@ -35,4 +36,10 @@ func distributeCards(deck Deck, playerCnt int) []Hand {
 		playerHands[i] = Hand(append(Deck(nil), deck[start:end]...))
 	}
 	return playerHands
+}
+
+func getHands(playerCount int) []Hand {
+	deck := newDeck()
+	shuffleDeck(deck)
+	return distributeCards(deck, playerCount)
 }
