@@ -17,22 +17,22 @@ func (s *Session) Context() context.Context {
 func (s *Session) GetPlayers() map[t.PlayerID]*t.Player {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.Players
+	return s.players
 }
 
 func (s *Session) Emit(out t.GameOutput) {
 	select {
-	case s.Outputs <- out:
+	case s.outputs <- out:
 	case <-s.ctx.Done():
 	}
 }
 
 type Session struct {
-	ID      string                   `json:"sessionId"`
-	Players map[t.PlayerID]*t.Player `json:"players"`
+	ID      string `json:"sessionId"`
+	players map[t.PlayerID]*t.Player
 
-	Inputs  chan t.GameInput
-	Outputs chan t.GameOutput
+	inputs  chan t.GameInput
+	outputs chan t.GameOutput
 
 	game *g.Game
 
@@ -48,10 +48,10 @@ func NewSession(sessionId string) *Session {
 
 	s := &Session{
 		ID:      sessionId,
-		Players: make(map[t.PlayerID]*t.Player),
+		players: make(map[t.PlayerID]*t.Player),
 
-		Inputs:  make(chan t.GameInput, 32),
-		Outputs: make(chan t.GameOutput, 32),
+		inputs:  make(chan t.GameInput, 32),
+		outputs: make(chan t.GameOutput, 32),
 
 		game:   nil,
 		ctx:    ctx,
@@ -68,24 +68,24 @@ func (s *Session) AddPlayer(player *t.Player) {
 	defer s.mu.Unlock()
 
 	// Prevent duplicate players by kicking out old one first
-	if old, ok := s.Players[player.ID]; ok {
+	if old, ok := s.players[player.ID]; ok {
 		old.Cancel()
 		close(old.Send)
 	}
 
-	s.Players[player.ID] = player
+	s.players[player.ID] = player
 }
 
 func (s *Session) RemovePlayer(player *t.Player) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if player, ok := s.Players[player.ID]; ok {
+	if player, ok := s.players[player.ID]; ok {
 		player.Cancel()    // stop the write loop
 		close(player.Send) // close outbound channel
-		delete(s.Players, player.ID)
+		delete(s.players, player.ID)
 
-		if len(s.Players) == 0 {
+		if len(s.players) == 0 {
 			s.cancel()
 		}
 	}
@@ -95,8 +95,8 @@ func (s *Session) CopyPlayerList() []*t.Player {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	players := make([]*t.Player, 0, len(s.Players))
-	for _, p := range s.Players {
+	players := make([]*t.Player, 0, len(s.players))
+	for _, p := range s.players {
 		players = append(players, p)
 	}
 	return players
@@ -108,10 +108,10 @@ func (s *Session) run() {
 		case <-s.ctx.Done():
 			return
 
-		case input := <-s.Inputs:
+		case input := <-s.inputs:
 			s.handleInput(input)
 
-		case output := <-s.Outputs:
+		case output := <-s.outputs:
 			s.handleOutput(output)
 		}
 	}
@@ -141,7 +141,7 @@ func (s *Session) handleOutput(output t.GameOutput) {
 	for _, id := range output.Players {
 
 		// Get Player from id common to Player and GamePlayer
-		player := s.Players[id]
+		player := s.players[id]
 
 		select {
 		case player.Send <- output.Env:

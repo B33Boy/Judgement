@@ -123,7 +123,7 @@ func broadcastPlayersUpdate(session *Session) {
 	}
 
 	select {
-	case session.Outputs <- out:
+	case session.outputs <- out:
 	case <-session.ctx.Done():
 		log.Printf("[broadcastPlayersUpdate] Closed session %v", session.ID)
 	}
@@ -131,7 +131,7 @@ func broadcastPlayersUpdate(session *Session) {
 
 func handleIncomingMessage(session *Session, player *t.Player, env t.Envelope) error {
 	select {
-	case session.Inputs <- t.GameInput{Player: player, Env: env}:
+	case session.inputs <- t.GameInput{Player: player, Env: env}:
 		return nil
 
 	case <-session.ctx.Done():

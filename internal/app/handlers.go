@@ -11,7 +11,10 @@ func (a *App) CreateSessionHandler(w http.ResponseWriter, r *http.Request) {
 	session := a.sessionStore.GenerateRandomSession()
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(session)
+	if err := json.NewEncoder(w).Encode(session); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (a *App) GetSessionHandler(w http.ResponseWriter, r *http.Request) {
