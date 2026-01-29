@@ -3,28 +3,20 @@ package app
 import (
 	"context"
 
+	t "github.com/B33Boy/Judgement/internal/types"
 	"github.com/coder/websocket"
 	"github.com/google/uuid"
 )
 
-type Player struct {
-	ID         PlayerID `json:"id"`
-	PlayerName string   `json:"playerName"`
-	Conn       *websocket.Conn
-	Send       chan Envelope
-	ctx        context.Context
-	cancel     context.CancelFunc
-}
-
-func NewPlayer(playerName string, conn *websocket.Conn) *Player {
+func NewPlayer(playerName string, conn *websocket.Conn) *t.Player {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	return &Player{
-		ID:         PlayerID(uuid.NewString()),
+	return &t.Player{
+		ID:         t.PlayerID(uuid.NewString()),
 		PlayerName: playerName,
 		Conn:       conn,
-		Send:       make(chan Envelope, 100),
-		ctx:        ctx,
-		cancel:     cancel,
+		Send:       make(chan t.Envelope, 100),
+		Ctx:        ctx,
+		Cancel:     cancel,
 	}
 }

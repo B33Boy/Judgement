@@ -12,15 +12,8 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 )
 
-// type ServerConfig struct {
-// 	port int
-// }
-
 func NewServer(app *app.App) *http.Server {
 	port, _ := strconv.Atoi(os.Getenv("PORT"))
-	// serverConfig := &ServerConfig{
-	// 	port: port,
-	// }
 
 	// Declare Server config
 	return &http.Server{

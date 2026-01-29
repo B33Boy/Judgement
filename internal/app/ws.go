@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 
+	t "github.com/B33Boy/Judgement/internal/types"
+
 	"github.com/coder/websocket"
 	"github.com/coder/websocket/wsjson"
 )
@@ -36,7 +38,7 @@ func (a *App) wsHandler(w http.ResponseWriter, r *http.Request) {
 	player := NewPlayer(playerName, conn)
 
 	defer func() {
-		player.cancel() // stops write loop
+		player.Cancel() // stops write loop
 		conn.Close(websocket.StatusNormalClosure, "")
 		onPlayerLeave(session, player)
 	}()
@@ -45,7 +47,7 @@ func (a *App) wsHandler(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		for {
 			select {
-			case <-player.ctx.Done():
+			case <-player.Ctx.Done():
 				log.Printf("Player %v exited!", player.PlayerName)
 				return
 			case <-session.ctx.Done():
@@ -67,7 +69,7 @@ func (a *App) wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	// ====== Read Loop ======
 	for {
-		var env Envelope
+		var env t.Envelope
 		if err := wsjson.Read(r.Context(), conn, &env); err != nil {
 
 			status := websocket.CloseStatus(err)
@@ -89,13 +91,13 @@ func (a *App) wsHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func onPlayerJoin(session *Session, player *Player) {
+func onPlayerJoin(session *Session, player *t.Player) {
 	session.AddPlayer(player)
 	broadcastPlayersUpdate(session)
 	log.Printf("Player (%v) added to session (%v)\n", player.PlayerName, session.ID)
 }
 
-func onPlayerLeave(session *Session, player *Player) {
+func onPlayerLeave(session *Session, player *t.Player) {
 	log.Printf("Player (%v) left session (%v)\n", player.PlayerName, session.ID)
 	session.RemovePlayer(player)
 	broadcastPlayersUpdate(session)
@@ -105,31 +107,31 @@ func broadcastPlayersUpdate(session *Session) {
 	players := session.CopyPlayerList()
 
 	all_names := make([]string, 0, len(players))
-	all_ids := make([]PlayerID, 0, len(players))
+	all_ids := make([]t.PlayerID, 0, len(players))
 
 	for _, p := range players {
 		all_names = append(all_names, p.PlayerName)
 		all_ids = append(all_ids, p.ID)
 	}
 
-	out := GameOutput{
+	out := t.GameOutput{
 		Players: all_ids,
-		Env: Envelope{
-			Type:    MsgPlayersUpdate,
+		Env: t.Envelope{
+			Type:    t.MsgPlayersUpdate,
 			Payload: mustMarshal(PlayersUpdatePayload{PlayerNames: all_names}),
 		},
 	}
 
 	select {
-	case session.outputs <- out:
+	case session.Outputs <- out:
 	case <-session.ctx.Done():
 		log.Printf("[broadcastPlayersUpdate] Closed session %v", session.ID)
 	}
 }
 
-func handleIncomingMessage(session *Session, player *Player, env Envelope) error {
+func handleIncomingMessage(session *Session, player *t.Player, env t.Envelope) error {
 	select {
-	case session.inputs <- GameInput{Player: player, Env: env}:
+	case session.Inputs <- t.GameInput{Player: player, Env: env}:
 		return nil
 
 	case <-session.ctx.Done():

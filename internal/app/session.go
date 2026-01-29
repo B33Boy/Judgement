@@ -3,20 +3,38 @@ package app
 import (
 	"context"
 	"log"
-	"math/rand"
 	"sync"
+
+	g "github.com/B33Boy/Judgement/internal/game"
+	t "github.com/B33Boy/Judgement/internal/types"
 )
 
-type PlayerID string
+// Implement SessionView implicitly
+func (s *Session) Context() context.Context {
+	return s.ctx
+}
+
+func (s *Session) GetPlayers() map[t.PlayerID]*t.Player {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.Players
+}
+
+func (s *Session) Emit(out t.GameOutput) {
+	select {
+	case s.Outputs <- out:
+	case <-s.ctx.Done():
+	}
+}
 
 type Session struct {
-	ID      string               `json:"sessionId"`
-	Players map[PlayerID]*Player `json:"players"`
+	ID      string                   `json:"sessionId"`
+	Players map[t.PlayerID]*t.Player `json:"players"`
 
-	inputs  chan GameInput
-	outputs chan GameOutput
+	Inputs  chan t.GameInput
+	Outputs chan t.GameOutput
 
-	game *Game
+	game *g.Game
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -30,10 +48,10 @@ func NewSession(sessionId string) *Session {
 
 	s := &Session{
 		ID:      sessionId,
-		Players: make(map[PlayerID]*Player),
+		Players: make(map[t.PlayerID]*t.Player),
 
-		inputs:  make(chan GameInput, 32),
-		outputs: make(chan GameOutput, 32),
+		Inputs:  make(chan t.GameInput, 32),
+		Outputs: make(chan t.GameOutput, 32),
 
 		game:   nil,
 		ctx:    ctx,
@@ -45,25 +63,25 @@ func NewSession(sessionId string) *Session {
 	return s
 }
 
-func (s *Session) AddPlayer(player *Player) {
+func (s *Session) AddPlayer(player *t.Player) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	// Prevent duplicate players by kicking out old one first
 	if old, ok := s.Players[player.ID]; ok {
-		old.cancel()
+		old.Cancel()
 		close(old.Send)
 	}
 
 	s.Players[player.ID] = player
 }
 
-func (s *Session) RemovePlayer(player *Player) {
+func (s *Session) RemovePlayer(player *t.Player) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if player, ok := s.Players[player.ID]; ok {
-		player.cancel()    // stop the write loop
+		player.Cancel()    // stop the write loop
 		close(player.Send) // close outbound channel
 		delete(s.Players, player.ID)
 
@@ -73,11 +91,11 @@ func (s *Session) RemovePlayer(player *Player) {
 	}
 }
 
-func (s *Session) CopyPlayerList() []*Player {
+func (s *Session) CopyPlayerList() []*t.Player {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	players := make([]*Player, 0, len(s.Players))
+	players := make([]*t.Player, 0, len(s.Players))
 	for _, p := range s.Players {
 		players = append(players, p)
 	}
@@ -90,22 +108,22 @@ func (s *Session) run() {
 		case <-s.ctx.Done():
 			return
 
-		case input := <-s.inputs:
+		case input := <-s.Inputs:
 			s.handleInput(input)
 
-		case output := <-s.outputs:
+		case output := <-s.Outputs:
 			s.handleOutput(output)
 		}
 	}
 }
 
-func (s *Session) handleInput(input GameInput) {
+func (s *Session) handleInput(input t.GameInput) {
 	switch input.Env.Type {
-	case MsgStartGame:
+	case t.MsgStartGame:
 		if s.game != nil {
 			return // already started
 		}
-		s.game = NewGame(s)
+		s.game = g.NewGame(s)
 		s.game.Start()
 	default:
 		if s.game == nil {
@@ -115,7 +133,7 @@ func (s *Session) handleInput(input GameInput) {
 	}
 }
 
-func (s *Session) handleOutput(output GameOutput) {
+func (s *Session) handleOutput(output t.GameOutput) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -133,57 +151,4 @@ func (s *Session) handleOutput(output GameOutput) {
 			log.Println("Dropping message for slow player with ID:", id)
 		}
 	}
-}
-
-type SessionStore struct {
-	sessions map[string]*Session
-	mu       sync.RWMutex
-}
-
-func NewSessionStore() *SessionStore {
-	return &SessionStore{
-		sessions: make(map[string]*Session),
-	}
-}
-
-func (s *SessionStore) GetSession(sessionId string) (*Session, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	session, exists := s.sessions[sessionId]
-	return session, exists
-}
-
-func (s *SessionStore) DeleteSession(sessionId string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	delete(s.sessions, sessionId)
-}
-
-func (s *SessionStore) GenerateRandomSession() *Session {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	const length = 8
-	var id string
-
-	for {
-		id = randomString(length)
-		if _, exists := s.sessions[id]; !exists {
-			break
-		}
-	}
-
-	session := NewSession(id)
-	s.sessions[id] = session
-	return session
-}
-
-func randomString(n int) string {
-	const letters = "abcdefghijklmnopqrstuvwxyz"
-
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letters[rand.Intn(len(letters))]
-	}
-	return string(b)
 }

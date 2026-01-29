@@ -1,10 +1,29 @@
-package app
+package types
+
+/*
+	Common types
+*/
 
 import (
+	"context"
 	"encoding/json"
+
+	"github.com/coder/websocket"
 )
 
-// ================= MessageTypes =================
+// ================= App Types =================
+type PlayerID string
+
+type Player struct {
+	ID         PlayerID `json:"id"`
+	PlayerName string   `json:"playerName"`
+	Conn       *websocket.Conn
+	Send       chan Envelope
+	Ctx        context.Context
+	Cancel     context.CancelFunc
+}
+
+// App Message Types
 type MessageType string
 
 const (
@@ -20,27 +39,19 @@ const (
 	MsgPlayCard MessageType = "play_card" // FE -> BE
 )
 
+// ================= Transmission Types =================
+
 type Envelope struct {
 	Type    MessageType     `json:"type"`
 	Payload json.RawMessage `json:"payload,omitempty"`
 }
 
-// ================= Payload Structs =================
-
-type PlayersUpdatePayload struct {
-	PlayerNames []string `json:"players"`
+type GameInput struct {
+	Player *Player
+	Env    Envelope
 }
 
-type PlayerHandChangePayload struct {
-	Cards Hand `json:"cards"`
-}
-
-type RoundInfoPayload struct {
-	Round      round  `json:"round"`
-	TurnPlayer string `json:"turnPlayer"`
-	State      State  `json:"state"`
-}
-
-type MakeBid struct {
-	Bid bid `json:"bid"`
+type GameOutput struct {
+	Players []PlayerID
+	Env     Envelope
 }
