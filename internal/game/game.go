@@ -152,7 +152,7 @@ func (g *Game) sendCardsToPlayer(playerID t.PlayerID) {
 
 func (g *Game) cyclePlayer() t.PlayerID {
 	startPlayerID, err := g.cycler.Next()
-	if err == nil {
+	if err != nil {
 		log.Println("Cannot fetch current player, 0 players in session!")
 		g.cancel()
 	}
