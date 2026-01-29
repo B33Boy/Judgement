@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"math/rand"
+	"time"
 
 	t "github.com/B33Boy/Judgement/internal/types"
 )
@@ -64,7 +66,18 @@ func NewGame(session SessionView) *Game {
 
 	// Cycler
 	cycler := NewPlayerCycler(gamePlayers)
-	firstPlayerID, _ := cycler.Next()
+
+	keys := make([]t.PlayerID, 0, len(gamePlayers))
+	for id := range gamePlayers {
+		keys = append(keys, id)
+	}
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	firstPlayerID := keys[rng.Intn(len(keys))]
+
+	err := cycler.StartFrom(firstPlayerID)
+	if err != nil {
+		log.Println("failed to start cycler:", err)
+	}
 
 	// State Machine
 	sm := NewStateMachine(StateBid)
@@ -194,19 +207,20 @@ func (g *Game) handleBid(input t.GameInput) {
 		return
 	}
 
-	curPlayer := g.Players[input.Player.ID]
-	if g.verifyPlayerTurn(curPlayer) != nil {
+	if input.Player.ID != g.turnPlayer {
+		log.Printf("It is %s's turn!\n", g.Players[g.turnPlayer].PlayerName)
 		return
 	}
 
+	curPlayer := g.Players[input.Player.ID]
 	g.recordBid(curPlayer, input)
 
 	g.turnPlayer = g.cyclePlayer()
 
 	if g.allPlayersBid() {
 		g.sm.Trigger(BiddingDone)
-		g.updateRound()
 	}
+
 	g.sendRoundInfo()
 }
 
@@ -246,8 +260,7 @@ func (g *Game) allPlayersBid() bool {
 func (g *Game) handlePlay(input t.GameInput) {
 	// receive played card, send rejection message if not possible to play
 	// get a struct of
-	// 1) play card 2) reveal sir card
-
+	// 1) play card
 	if input.Env.Type != t.MsgPlayCard {
 		log.Println("Invalid message type, \"make_bid\" expected")
 		return
@@ -272,19 +285,23 @@ func (g *Game) handlePlay(input t.GameInput) {
 
 func (g *Game) handleResolution(input t.GameInput) {
 	// Update scores and send to frontend
+	// call StartFrom() to start from the winning player
+	// call UpdateRound() here
+	g.updateRound()
 }
 
 func (g *Game) updateRound() {
 	// Run this after every player turn, it will only update round when we return back to first player
 	completed := g.cycler.CompletedCycle()
 	if !completed {
+		log.Println("Player cycle not completed, not updating round yet")
 		return
 	}
 	g.params.round++
 
 	if g.params.round > g.params.maxRounds {
 		// state change to finished game
-		g.sendGameFinished()
+		g.trigger(PlayingDone)
 	}
 }
 
@@ -295,4 +312,35 @@ func (g *Game) sendGameFinished() {
 			Type: t.MsgGameEnd,
 		},
 	})
+}
+
+func (g *Game) trigger(event Event) {
+	prev := g.sm.state
+	next, err := g.sm.Trigger(event)
+
+	if err != nil {
+		log.Printf("trigger state change failed: %v\n", err)
+		return
+	}
+
+	g.onStateChanged(prev, next)
+}
+
+func (g *Game) onStateChanged(from, to State) {
+	switch to {
+
+	case StateBid:
+		log.Println("StateBid")
+
+	case StatePlay:
+		g.cycler.StartFrom(g.turnPlayer)
+		log.Println("StatePlay")
+
+	case StateResolution:
+		log.Println("StateResolution")
+
+	case StateGameOver:
+		log.Println("StateGameOver")
+		g.sendGameFinished()
+	}
 }

@@ -23,13 +23,13 @@ func (sm *StateMachine) AddTransition(from State, event Event, to State) {
 	sm.transitions[from][event] = to
 }
 
-func (sm *StateMachine) Trigger(event Event) error {
+func (sm *StateMachine) Trigger(event Event) (State, error) {
 	next, ok := sm.transitions[sm.state][event]
 
 	if !ok {
-		return fmt.Errorf("invalid transition: %s + %s", sm.state, event)
+		return sm.state, fmt.Errorf("invalid transition: %s + %s", sm.state, event)
 	}
 
 	sm.state = next
-	return nil
+	return next, nil
 }
