@@ -44,8 +44,11 @@ func (pc *PlayerCycler) Next() (t.PlayerID, error) {
 		return "", errors.New("0 players to cycle through")
 	}
 
-	playerID := pc.keys[pc.index]
+	// 1. Increment the index first to move to the next person
 	pc.index = (pc.index + 1) % len(pc.keys)
+
+	// 2. Grab the ID at the new index
+	playerID := pc.keys[pc.index]
 	pc.started = true
 
 	return playerID, nil
