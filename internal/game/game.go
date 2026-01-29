@@ -217,7 +217,7 @@ func (g *Game) handleBid(input t.GameInput) {
 
 	g.turnPlayer = g.cyclePlayer()
 
-	if g.allPlayersBid() {
+	if g.cycler.CompletedCycle() {
 		g.sm.Trigger(BiddingDone)
 	}
 
@@ -246,15 +246,6 @@ func (g *Game) recordBid(curPlayer *GamePlayer, input t.GameInput) {
 	// If not possible send message back
 
 	curPlayer.Bid = &payload.Bid
-}
-
-func (g *Game) allPlayersBid() bool {
-	for _, player := range g.Players {
-		if player.Bid == nil {
-			return false
-		}
-	}
-	return true
 }
 
 func (g *Game) handlePlay(input t.GameInput) {
