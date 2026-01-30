@@ -1,21 +1,88 @@
 package game
 
-import "math/rand"
+import (
+	"math/rand"
+)
 
-type Deck []string
-type Hand []string
+// ================================== Card ==================================
+type Suit int
+type Rank int
+
+const (
+	Spade Suit = iota
+	Heart
+	Diamond
+	Club
+)
+
+const (
+	Two Rank = iota + 2
+	Three
+	Four
+	Five
+	Six
+	Seven
+	Eight
+	Nine
+	Ten
+	Jack
+	Queen
+	King
+	Ace
+)
+
+type Card struct {
+	Suit Suit
+	Rank Rank
+}
+
+func (s Suit) String() string {
+	return [...]string{"SPADE", "HEART", "DIAMOND", "CLUB"}[s]
+}
+
+func (r Rank) String() string {
+	return [...]string{
+		"", "", "2", "3", "4", "5", "6", "7",
+		"8", "9", "10", "JACK", "QUEEN", "KING", "ACE",
+	}[r]
+}
+
+func (c Card) String() string {
+	return c.Suit.String() + "-" + c.Rank.String()
+}
+
+func higherRank(a, b Card) bool {
+	return a.Rank > b.Rank
+}
+func sameSuit(a, b Card) bool {
+	return a.Suit == b.Suit
+}
+
+// ================================== Card ==================================
+
+type Deck []Card
+type Hand []Card
+
+func getStrHand(hand Hand) []string {
+	strCards := make([]string, len(hand))
+	for i, card := range hand {
+		strCards[i] = card.String()
+	}
+	return strCards
+}
 
 func newDeck() Deck {
-	cards := make(Deck, 52)
-	cardIdx := 0
+	deck := make(Deck, 0, 52)
 
-	for _, suit := range []string{"SPADE", "HEART", "DIAMOND", "CLUB"} {
-		for _, rank := range []string{"2", "3", "4", "5", "6", "7", "8", "9", "10", "JACK", "QUEEN", "KING", "ACE"} {
-			cards[cardIdx] = suit + "-" + rank
-			cardIdx++
+	for s := Spade; s <= Club; s++ {
+		for r := Two; r <= Ace; r++ {
+			deck = append(deck, Card{
+				Suit: s,
+				Rank: r,
+			})
 		}
 	}
-	return cards
+	return deck
 }
 
 func shuffleDeck(cards Deck) {
@@ -29,11 +96,12 @@ func distributeCards(deck Deck, playerCnt int) []Hand {
 	playerHands := make([]Hand, playerCnt)
 	cardsPerPlayer := 7
 
-	for i := range playerCnt {
+	for i := 0; i < playerCnt; i++ {
 		start := i * cardsPerPlayer
 		end := start + cardsPerPlayer
 
-		playerHands[i] = Hand(append(Deck(nil), deck[start:end]...))
+		// copy the slice so each hand has its own backing array
+		playerHands[i] = append(Hand(nil), deck[start:end]...)
 	}
 	return playerHands
 }

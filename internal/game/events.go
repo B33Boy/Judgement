@@ -17,9 +17,12 @@ func (g *Game) sendGameStarted() {
 
 func (g *Game) sendCardsToPlayer(playerID t.PlayerID) {
 	player := g.Players[playerID]
-	payload, _ := json.Marshal(PlayerHandChangePayload{
-		Cards: player.Cards,
-	})
+
+	strHand := getStrHand(player.Cards)
+
+	payload, _ := json.Marshal(struct {
+		Cards []string `json:"cards"`
+	}{Cards: strHand})
 
 	out := t.GameOutput{
 		Players: []t.PlayerID{player.ID},
