@@ -9,6 +9,8 @@ import BidBox from "../components/BidBox";
 import GameTable from "../components/GameTable";
 import PlayerHand from "../components/PlayerHand";
 
+import { DndContext, type DragEndEvent } from "@dnd-kit/core";
+
 export default function GamePage() {
   const { sessionId, playerName } = useParams();
   const {
@@ -36,31 +38,56 @@ export default function GamePage() {
 
   const isPlaying = roundInfo?.state === "playing";
 
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+
+    if (!over) return;
+
+    const cardId = active.id; // e.g. "card-CLUB-2"
+    const dropZoneId = over.id; // e.g. "table-slot-Bob"
+
+    const targetPlayer = String(dropZoneId).replace("table-slot-", "");
+    if (targetPlayer != playerName) return;
+
+    const card = String(cardId).replace("card-", "");
+
+    console.log(`${targetPlayer} played ${card} `);
+    // // This is where you trigger your game action
+    // // For example, tell the server "play this card to this slot"
+    // sendMessage({
+    //   type: "PLAY_CARD",
+    //   card,
+    //   targetPlayer,
+    // });
+  }
+
   return (
-    <div className="game-layout">
-      <h1 className="title">Judgement</h1>
-      <div className="session">
-        <SessionBox sessionId={sessionId} playerName={playerName} />
-      </div>
+    <DndContext onDragEnd={handleDragEnd}>
+      <div className="game-layout">
+        <h1 className="title">Judgement</h1>
+        <div className="session">
+          <SessionBox sessionId={sessionId} playerName={playerName} />
+        </div>
 
-      <div className="round">
-        <RoundData roundInfo={roundInfo} />
-      </div>
+        <div className="round">
+          <RoundData roundInfo={roundInfo} />
+        </div>
 
-      <div className="score">
-        <ScoreTable scores={scores} />
-      </div>
+        <div className="score">
+          <ScoreTable scores={scores} />
+        </div>
 
-      <div className="action">
-        {isBiddingTurn && <BidBox msgFunction={sendMessage} />}
-        {isPlaying && (
-          <GameTable players={players} turnPlayer={roundInfo.turnPlayer} />
-        )}
-      </div>
+        <div className="action">
+          {isBiddingTurn && <BidBox msgFunction={sendMessage} />}
+          {isPlaying && (
+            <GameTable players={players} turnPlayer={roundInfo.turnPlayer} />
+          )}
+        </div>
 
-      <div className="hand">
-        <PlayerHand hand={hand} />
+        <div className="hand">
+          <PlayerHand hand={hand} />
+        </div>
       </div>
-    </div>
+    </DndContext>
   );
 }
