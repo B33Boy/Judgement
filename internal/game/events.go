@@ -68,7 +68,7 @@ func (g *Game) sendInvalidMove(playerID t.PlayerID, message string) {
 	out := t.GameOutput{
 		Players: []t.PlayerID{playerID},
 		Env: t.Envelope{
-			Type:    t.MsgInvalidMove,
+			Type:    t.MsgInvalidAction,
 			Payload: payload,
 		},
 	}

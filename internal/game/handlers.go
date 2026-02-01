@@ -54,6 +54,8 @@ func (g *Game) handlePlay(input t.GameInput) {
 		log.Println("Invalid message type, \"make_bid\" expected")
 		return
 	}
+
+	// Get card from input
 	var playedCard Card
 	err := json.Unmarshal(input.Env.Payload, &playedCard)
 	if err != nil {
@@ -63,6 +65,7 @@ func (g *Game) handlePlay(input t.GameInput) {
 
 	log.Printf("%v", playedCard.String())
 
+	// Get player from input and ensure that it is their turn
 	curPlayer := g.Players[input.Player.ID]
 	if g.verifyPlayerTurn(curPlayer) != nil {
 		g.sendInvalidMove(input.Player.ID, "Not your turn")
