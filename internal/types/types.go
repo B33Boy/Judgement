@@ -37,6 +37,8 @@ const (
 	MsgGameEnd  MessageType = "game_end"  // BE -> FE
 	MsgMakeBid  MessageType = "make_bid"  // FE -> BE
 	MsgPlayCard MessageType = "play_card" // FE -> BE
+
+	MsgInvalidMove MessageType = "invalid_move" // BE -> FE
 )
 
 // ================= Transmission Types =================

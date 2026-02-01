@@ -29,6 +29,8 @@ type Game struct {
 	cycler     *PlayerCycler
 	sm         *StateMachine
 	scores     PlayerScore
+	cardstack  []*Card
+	sir        *Suit
 }
 
 type SessionView interface {
@@ -100,6 +102,8 @@ func NewGame(session SessionView) *Game {
 		cycler:     cycler,
 		sm:         sm,
 		scores:     scores,
+		cardstack:  make([]*Card, 0),
+		sir:        nil,
 	}
 }
 

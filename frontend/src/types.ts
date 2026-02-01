@@ -11,7 +11,8 @@ export interface WSEnvelope {
     | "start_game"
     | "player_hand"
     | "round_info"
-    | "make_bid";
+    | "make_bid"
+    | "play_card";
   payload?: any;
 }
 
@@ -26,3 +27,33 @@ export interface RoundInfo {
 }
 
 export type Scores = Map<string, number[]>;
+
+// export type Card = {
+//   suit: string;
+//   rank: string;
+// };
+
+// export type Cards = Card[];
+
+export const suitMap: Record<string, number> = {
+  SPADE: 0,
+  HEART: 1,
+  DIAMOND: 2,
+  CLUB: 3,
+};
+
+export const rankMap: Record<string, number> = {
+  "2": 2,
+  "3": 3,
+  "4": 4,
+  "5": 5,
+  "6": 6,
+  "7": 7,
+  "8": 8,
+  "9": 9,
+  "10": 10,
+  JACK: 11,
+  QUEEN: 12,
+  KING: 13,
+  ACE: 14,
+};

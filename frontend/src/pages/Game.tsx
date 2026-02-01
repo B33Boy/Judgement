@@ -11,6 +11,8 @@ import PlayerHand from "../components/PlayerHand";
 
 import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 
+import { suitMap, rankMap } from "../types.ts";
+
 export default function GamePage() {
   const { sessionId, playerName } = useParams();
   const {
@@ -51,14 +53,11 @@ export default function GamePage() {
 
     const card = String(cardId).replace("card-", "");
 
-    console.log(`${targetPlayer} played ${card} `);
-    // // This is where you trigger your game action
-    // // For example, tell the server "play this card to this slot"
-    // sendMessage({
-    //   type: "PLAY_CARD",
-    //   card,
-    //   targetPlayer,
-    // });
+    console.log(`${targetPlayer} played ${card}`);
+
+    const [suit, rank] = card.split("-");
+
+    sendMessage("play_card", { suit: suitMap[suit], rank: rankMap[rank] });
   }
 
   return (

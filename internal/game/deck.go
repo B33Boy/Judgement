@@ -32,8 +32,8 @@ const (
 )
 
 type Card struct {
-	Suit Suit
-	Rank Rank
+	Suit Suit `json:"suit"`
+	Rank Rank `json:"rank"`
 }
 
 func (s Suit) String() string {
@@ -54,8 +54,13 @@ func (c Card) String() string {
 func higherRank(a, b Card) bool {
 	return a.Rank > b.Rank
 }
+
 func sameSuit(a, b Card) bool {
 	return a.Suit == b.Suit
+}
+
+func (card *Card) greater_than(other *Card) bool {
+	return sameSuit(*card, *other) && higherRank(*card, *other)
 }
 
 // ================================== Card ==================================

@@ -50,27 +50,40 @@ func (g *Game) recordBid(curPlayer *GamePlayer, input t.GameInput) {
 
 func (g *Game) handlePlay(input t.GameInput) {
 	// receive played card, send rejection message if not possible to play
-	// get a struct of
-	// 1) play card
 	if input.Env.Type != t.MsgPlayCard {
 		log.Println("Invalid message type, \"make_bid\" expected")
 		return
 	}
-
-	curPlayer := g.Players[input.Player.ID]
-	if g.verifyPlayerTurn(curPlayer) != nil {
+	var playedCard Card
+	err := json.Unmarshal(input.Env.Payload, &playedCard)
+	if err != nil {
+		log.Println("Cannot unmarshal played card")
 		return
 	}
 
-	// check if card is valid
+	log.Printf("%v", playedCard.String())
+
+	curPlayer := g.Players[input.Player.ID]
+	if g.verifyPlayerTurn(curPlayer) != nil {
+		g.sendInvalidMove(input.Player.ID, "Not your turn")
+		return
+	}
+
+	// // check if card is playable
+	if !g.isCardPlayable(curPlayer, playedCard) {
+		g.sendInvalidMove(input.Player.ID, "Card cannot be played")
+		return
+	}
 	// Play card
+	// g.playCard(input.Player.ID, input.Card)
 
 	g.turnPlayer = g.cyclePlayer()
 
-	// if g.allPlayersPlayedCard() {
-	// 	g.sm.Trigger(PlayingDone)
-	// 	g.updateRound()
-	// }
+	if g.cycler.CompletedCycle() {
+		g.sm.Trigger(PlayingDone)
+		g.updateRound()
+	}
+	// g.broadcastCardPlayed(input.Player.ID, input.Card)
 	g.sendRoundInfo()
 }
 
@@ -102,4 +115,36 @@ func (g *Game) verifyPlayerTurn(player *GamePlayer) error {
 		return errors.New("Incorrect player turn")
 	}
 	return nil
+}
+
+func (g *Game) isCardPlayable(player *GamePlayer, card Card) bool {
+
+	// If there are no cards on the cardstack, any card is playable
+	num_cards := len(g.cardstack)
+	if num_cards == 0 {
+		return true
+	}
+
+	curTop := *g.cardstack[num_cards-1]
+
+	// Check if player has other cards in the hand that they can play
+	// You can play if same suite or sir, if you don't have either than you can play whatever card
+	cards_allowable := make([]Card, 0)
+	for _, playerCard := range player.Cards {
+		if sameSuit(playerCard, curTop) || playerCard.Suit == *g.sir {
+			// From the allowed cards, if the current is a
+			if playerCard == card {
+				log.Println("Card is either the same suit or the sir")
+				return true
+			}
+			cards_allowable = append(cards_allowable, playerCard)
+		}
+	}
+
+	if len(cards_allowable) == 0 {
+		log.Println("Card is a fish")
+		return true // fish - any card is allowed
+	}
+
+	return false
 }

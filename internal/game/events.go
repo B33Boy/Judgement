@@ -59,3 +59,19 @@ func (g *Game) sendGameFinished() {
 		},
 	})
 }
+
+func (g *Game) sendInvalidMove(playerID t.PlayerID, message string) {
+	payload, _ := json.Marshal(InvalidActionPayload{
+		Message: message,
+	})
+
+	out := t.GameOutput{
+		Players: []t.PlayerID{playerID},
+		Env: t.Envelope{
+			Type:    t.MsgInvalidMove,
+			Payload: payload,
+		},
+	}
+
+	g.emit(out)
+}
