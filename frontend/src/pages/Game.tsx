@@ -43,9 +43,13 @@ export default function GamePage() {
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
 
+    console.log(`PlayerId: ${playerId}`);
+    console.log(`PlayerName: ${playerName}`);
+
     if (!over || !playerId) return;
 
     const targetPlayerId = String(over.id).replace("table-slot-", ""); // e.g. "table-slot-Bob"
+    console.log(`TargetPlayerID: ${targetPlayerId}`);
     if (targetPlayerId != playerId) return;
 
     const card = String(active.id).replace("card-", ""); // e.g. "card-CLUB-2"

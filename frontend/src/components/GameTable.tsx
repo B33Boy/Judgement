@@ -25,18 +25,14 @@ export default function GameTable({ players, turnPlayer }: GameTableProps) {
   return (
     <div className="table">
       {players.map((p: PlayerPublic) => (
-        <TableEntry
-          key={p.id}
-          player={p.name}
-          isCurrentTurn={p.id === turnPlayer}
-        />
+        <TableEntry key={p.id} player={p} isCurrentTurn={p.id === turnPlayer} />
       ))}
     </div>
   );
 }
 
 type TableEntryProps = {
-  player: string;
+  player: PlayerPublic;
   isCurrentTurn: boolean;
 };
 
@@ -45,13 +41,13 @@ function TableEntry({ player, isCurrentTurn }: TableEntryProps) {
     <div
       className={`table-entry-container ${isCurrentTurn ? "current-turn" : ""}`}
     >
-      <p className="player-name">{player}</p>
+      <p className="player-name">{player.name}</p>
       <div className="table-entry"></div>
     </div>
   );
 
   return isCurrentTurn ? (
-    <Droppable id={`table-slot-${player}`}>{content}</Droppable>
+    <Droppable id={`table-slot-${player.id}`}>{content}</Droppable>
   ) : (
     content
   );
