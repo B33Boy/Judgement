@@ -93,6 +93,7 @@ func (a *App) wsHandler(w http.ResponseWriter, r *http.Request) {
 
 func onPlayerJoin(session *Session, player *t.Player) {
 	session.AddPlayer(player)
+	sendWelcome(player, session)
 	broadcastPlayersUpdate(session)
 	log.Printf("Player (%v) added to session (%v)\n", player.PlayerName, session.ID)
 }
@@ -103,22 +104,41 @@ func onPlayerLeave(session *Session, player *t.Player) {
 	broadcastPlayersUpdate(session)
 }
 
+func sendWelcome(player *t.Player, session *Session) {
+	out := t.GameOutput{
+		Players: []t.PlayerID{player.ID},
+		Env: t.Envelope{
+			Type:    t.MsgWelcome,
+			Payload: mustMarshal(player.ID),
+		},
+	}
+
+	select {
+	case session.outputs <- out:
+	case <-session.ctx.Done():
+		log.Printf("[sendWelcome] Closed session %v", session.ID)
+	}
+}
+
 func broadcastPlayersUpdate(session *Session) {
 	players := session.CopyPlayerList()
 
-	all_names := make([]string, 0, len(players))
-	all_ids := make([]t.PlayerID, 0, len(players))
+	public := make([]PlayerPublic, 0, len(players))
+	allIDs := make([]t.PlayerID, 0, len(players))
 
 	for _, p := range players {
-		all_names = append(all_names, p.PlayerName)
-		all_ids = append(all_ids, p.ID)
+		allIDs = append(allIDs, p.ID)
+		public = append(public, PlayerPublic{
+			ID:   p.ID,
+			Name: p.PlayerName,
+		})
 	}
 
 	out := t.GameOutput{
-		Players: all_ids,
+		Players: allIDs,
 		Env: t.Envelope{
 			Type:    t.MsgPlayersUpdate,
-			Payload: mustMarshal(PlayersUpdatePayload{PlayerNames: all_names}),
+			Payload: mustMarshal(public),
 		},
 	}
 

@@ -27,18 +27,19 @@ type Player struct {
 type MessageType string
 
 const (
-	MsgPlayersUpdate MessageType = "players_update" // BE -> FE
-	MsgStartGame     MessageType = "start_game"     // FE -> BE
-	MsgGameStarted   MessageType = "game_started"   // BE -> FE
+	// FE -> BE
+	MsgStartGame MessageType = "start_game"
+	MsgMakeBid   MessageType = "make_bid"
+	MsgPlayCard  MessageType = "play_card"
 
-	MsgPlayerHand MessageType = "player_hand" // BE -> FE
-	MsgRoundInfo  MessageType = "round_info"  // BE -> FE
-
-	MsgGameEnd  MessageType = "game_end"  // BE -> FE
-	MsgMakeBid  MessageType = "make_bid"  // FE -> BE
-	MsgPlayCard MessageType = "play_card" // FE -> BE
-
-	MsgInvalidAction MessageType = "invalid_action" // BE -> FE
+	// BE -> FE
+	MsgWelcome       MessageType = "welcome"
+	MsgPlayersUpdate MessageType = "players_update"
+	MsgGameStarted   MessageType = "game_started"
+	MsgGameEnd       MessageType = "game_end"
+	MsgPlayerHand    MessageType = "player_hand"
+	MsgStateSync     MessageType = "state_sync"
+	MsgInvalidAction MessageType = "invalid_action"
 )
 
 // ================= Transmission Types =================

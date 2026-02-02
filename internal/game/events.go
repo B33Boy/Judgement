@@ -35,17 +35,14 @@ func (g *Game) sendCardsToPlayer(playerID t.PlayerID) {
 	g.emit(out)
 }
 
-func (g *Game) sendRoundInfo() {
-	payload, _ := json.Marshal(RoundInfoPayload{
-		Round:      g.state.Round,
-		TurnPlayer: g.Players[g.state.TurnPlayer].PlayerName,
-		State:      g.sm.state,
-	})
+func (g *Game) broadcastGameState() {
+
+	payload, _ := json.Marshal(g.state)
 
 	g.emit(t.GameOutput{
 		Players: g.allPlayerIDs(),
 		Env: t.Envelope{
-			Type:    t.MsgRoundInfo,
+			Type:    t.MsgStateSync,
 			Payload: payload,
 		},
 	})

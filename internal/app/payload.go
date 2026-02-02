@@ -1,5 +1,8 @@
 package app
 
-type PlayersUpdatePayload struct {
-	PlayerNames []string `json:"players"`
+import t "github.com/B33Boy/Judgement/internal/types"
+
+type PlayerPublic struct {
+	ID   t.PlayerID `json:"id"`
+	Name string     `json:"name"`
 }

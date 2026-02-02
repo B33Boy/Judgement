@@ -29,7 +29,7 @@ func (g *Game) handleBid(input t.GameInput) {
 		g.sm.Trigger(BiddingDone)
 	}
 
-	g.sendRoundInfo()
+	g.broadcastGameState()
 }
 
 func (g *Game) recordBid(curPlayer *GamePlayer, input t.GameInput) {
@@ -87,7 +87,7 @@ func (g *Game) handlePlay(input t.GameInput) {
 		g.updateRound()
 	}
 	// g.broadcastCardPlayed(input.Player.ID, input.Card)
-	g.sendRoundInfo()
+	g.broadcastGameState()
 }
 
 func (g *Game) handleResolution(input t.GameInput) {

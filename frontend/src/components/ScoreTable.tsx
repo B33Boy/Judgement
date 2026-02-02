@@ -1,10 +1,14 @@
-import type { Scores } from "../types";
+import type { GameState } from "../types";
 
-export default function ScoreTable({ scores }: { scores: Scores | null }) {
-  if (!scores) return;
+export default function ScoreTable({
+  gameState,
+}: {
+  gameState: GameState | null;
+}) {
+  if (!gameState) return;
 
   const NUM_ROUNDS = 14;
-  const entries = Array.from(scores.entries());
+  // const entries = Array.from(scores.entries());
 
   return (
     <table className="score-table">

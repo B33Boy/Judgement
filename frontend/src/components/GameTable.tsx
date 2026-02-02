@@ -1,4 +1,5 @@
 import { useDroppable } from "@dnd-kit/core";
+import type { PlayerPublic, Players } from "../types";
 
 function Droppable(props: any) {
   const { isOver, setNodeRef } = useDroppable({ id: props.id });
@@ -16,15 +17,19 @@ function Droppable(props: any) {
 }
 
 type GameTableProps = {
-  players: string[];
+  players: Players;
   turnPlayer: string;
 };
 
 export default function GameTable({ players, turnPlayer }: GameTableProps) {
   return (
     <div className="table">
-      {players.map((p) => (
-        <TableEntry key={p} player={p} isCurrentTurn={p === turnPlayer} />
+      {players.map((p: PlayerPublic) => (
+        <TableEntry
+          key={p.id}
+          player={p.name}
+          isCurrentTurn={p.id === turnPlayer}
+        />
       ))}
     </div>
   );

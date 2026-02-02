@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useParams, Navigate } from "react-router-dom";
 import { getPlayerName } from "../lib/player";
 import { useGame } from "../context/GameContext";
+import type { PlayerPublic } from "../types";
 
 export default function SessionPage() {
   const { sessionId } = useParams();
@@ -27,8 +28,8 @@ export default function SessionPage() {
       <div className="player-list">
         <h4>Players ({players.length})</h4>
         <ul>
-          {players.map((p) => (
-            <li key={p}>{p}</li>
+          {players.map((p: PlayerPublic) => (
+            <li key={p.id}>{p.name}</li>
           ))}
         </ul>
       </div>

@@ -1,17 +1,17 @@
-import type { RoundInfo } from "../types";
+import type { GameState } from "../types";
 
 export default function RoundData({
-  roundInfo,
+  gameState,
 }: {
-  roundInfo: RoundInfo | null;
+  gameState: GameState | null;
 }) {
   return (
     <div className="round-info">
-      {roundInfo ? (
+      {gameState ? (
         <div>
-          <p>Round: {roundInfo.round}</p>
-          <p>Turn: {roundInfo.turnPlayer}</p>
-          <p>State: {roundInfo.state}</p>
+          <p>Round: {gameState.round}</p>
+          <p>Turn: {gameState.turnPlayer}</p>
+          <p>State: {gameState.state}</p>
         </div>
       ) : (
         <p>Waiting for round info</p>

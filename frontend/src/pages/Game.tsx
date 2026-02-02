@@ -4,7 +4,7 @@ import { useGame } from "../context/GameContext";
 
 import SessionBox from "../components/SessionBox";
 import RoundData from "../components/RoundData";
-import ScoreTable from "../components/ScoreTable";
+// import ScoreTable from "../components/ScoreTable";
 import BidBox from "../components/BidBox";
 import GameTable from "../components/GameTable";
 import PlayerHand from "../components/PlayerHand";
@@ -17,10 +17,10 @@ export default function GamePage() {
   const { sessionId, playerName } = useParams();
   const {
     isConnected,
+    playerId,
     players,
     hand,
-    roundInfo,
-    scores,
+    gameState,
     connect,
     sendMessage,
   } = useGame();
@@ -36,27 +36,22 @@ export default function GamePage() {
   }, [sessionId, playerName, isConnected, connect]);
 
   const isBiddingTurn =
-    roundInfo?.state === "bidding" && roundInfo?.turnPlayer === playerName;
+    gameState?.state === "bidding" && gameState?.turnPlayer === playerId;
 
-  const isPlaying = roundInfo?.state === "playing";
+  const isPlaying = gameState?.state === "playing";
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
 
-    if (!over) return;
+    if (!over || !playerId) return;
 
-    const cardId = active.id; // e.g. "card-CLUB-2"
-    const dropZoneId = over.id; // e.g. "table-slot-Bob"
+    const targetPlayerId = String(over.id).replace("table-slot-", ""); // e.g. "table-slot-Bob"
+    if (targetPlayerId != playerId) return;
 
-    const targetPlayer = String(dropZoneId).replace("table-slot-", "");
-    if (targetPlayer != playerName) return;
-
-    const card = String(cardId).replace("card-", "");
-
-    console.log(`${targetPlayer} played ${card}`);
-
+    const card = String(active.id).replace("card-", ""); // e.g. "card-CLUB-2"
     const [suit, rank] = card.split("-");
 
+    console.log(`${playerName} played ${card}`);
     sendMessage("play_card", { suit: suitMap[suit], rank: rankMap[rank] });
   }
 
@@ -69,17 +64,17 @@ export default function GamePage() {
         </div>
 
         <div className="round">
-          <RoundData roundInfo={roundInfo} />
+          <RoundData gameState={gameState} />
         </div>
 
-        <div className="score">
-          <ScoreTable scores={scores} />
-        </div>
+        {/* <div className="score">
+          <ScoreTable scores={gameState} />
+        </div> */}
 
         <div className="action">
           {isBiddingTurn && <BidBox msgFunction={sendMessage} />}
           {isPlaying && (
-            <GameTable players={players} turnPlayer={roundInfo.turnPlayer} />
+            <GameTable players={players} turnPlayer={gameState.turnPlayer} />
           )}
         </div>
 

@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { useNavigate } from "react-router-dom";
-import type { WSEnvelope, RoundInfo, Scores } from "../types";
+import type { WSEnvelope, GameState, Players } from "../types";
 
 const WS_BASE = `ws://localhost:${import.meta.env.VITE_PORT}`;
 
@@ -15,10 +15,10 @@ export type MessageHandler = (type: WSEnvelope["type"], payload?: any) => void;
 
 interface GameContextType {
   isConnected: boolean;
-  players: string[];
+  playerId: string | null;
+  players: Players;
   hand: string[];
-  roundInfo: RoundInfo | null;
-  scores: Scores | null;
+  gameState: GameState | null;
   connect: (sessionId: string, playerName: string) => void;
   disconnect: () => void;
   sendMessage: MessageHandler;
@@ -29,10 +29,14 @@ const GameContext = createContext<GameContextType | null>(null);
 export function GameProvider({ children }: { children: ReactNode }) {
   // States
   const [isConnected, setIsConnected] = useState(false);
-  const [players, setPlayers] = useState<string[]>([]);
+  const [playerId, setPlayerId] = useState<string | null>(null);
+  const [players, setPlayers] = useState<Players>([]);
   const [hand, setHand] = useState<string[]>([]);
-  const [roundInfo, setRoundInfo] = useState<RoundInfo | null>(null);
-  const [scores, setScores] = useState<Scores | null>(null);
+  // const [roundInfo, setRoundInfo] = useState<RoundInfo | null>(null);
+  // const [scores, setScores] = useState<Scores | null>(null);
+
+  // Inside your Provider:
+  const [gameState, setGameState] = useState<GameState | null>(null);
 
   // Refs
   const currentPlayerRef = useRef<string>("");
@@ -61,8 +65,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
         switch (msg.type) {
           // Lobby
+          case "welcome":
+            setPlayerId(msg.payload);
+            break;
+
           case "players_update":
-            setPlayers(msg.payload.players ?? []);
+            setPlayers(msg.payload ?? []);
             break;
 
           case "game_started":
@@ -75,10 +83,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
             setHand(msg.payload.cards ?? []);
             break;
 
-          case "round_info":
-            console.log("Round Info: ", msg.payload);
-            const payload = msg.payload as RoundInfo;
-            setRoundInfo(payload);
+          case "state_sync":
+            console.log("State Sync: ", msg.payload);
+            setGameState(msg.payload);
             break;
 
           case "error":
@@ -107,10 +114,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     <GameContext.Provider
       value={{
         isConnected,
+        playerId,
         players,
         hand,
-        roundInfo,
-        scores,
+        gameState,
         connect,
         disconnect,
         sendMessage,

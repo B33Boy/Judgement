@@ -5,6 +5,7 @@ export interface SessionInfo {
 
 export interface WSEnvelope {
   type:
+    | "welcome"
     | "players_update"
     | "game_started"
     | "error"
@@ -12,19 +13,26 @@ export interface WSEnvelope {
     | "player_hand"
     | "round_info"
     | "make_bid"
-    | "play_card";
+    | "play_card"
+    | "state_sync";
   payload?: any;
 }
 
-export interface PlayerState {
-  players: string[];
+export interface GameState {
+  round: number;
+  state: "bidding" | "playing" | "resolution" | "gameover";
+  turnPlayer: string; // PlayerID
+  trumpSuit: string | null;
+  table: Record<string, string>; // PlayerID -> CardID
+  bids: Record<string, number>; // PlayerID -> bid
+  handsWon: Record<string, number>; // PlayerID -> number hands won this
 }
 
-export interface RoundInfo {
-  round: number;
-  turnPlayer: string;
-  state: string;
-}
+export type PlayerPublic = {
+  id: string;
+  name: string;
+};
+export type Players = PlayerPublic[];
 
 export type Scores = Map<string, number[]>;
 

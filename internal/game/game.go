@@ -136,7 +136,7 @@ func (g *Game) Start() {
 	}
 
 	// Send Round # and Send Turn PlayerId
-	g.sendRoundInfo()
+	g.broadcastGameState()
 }
 
 func (g *Game) HandleGameInput(input t.GameInput) {
