@@ -23,7 +23,7 @@ func (g *Game) onStateChanged(from, to State) {
 		log.Println("StateBid")
 
 	case StatePlay:
-		g.cycler.StartFrom(g.turnPlayer)
+		g.cycler.StartFrom(g.state.TurnPlayer)
 		log.Println("StatePlay")
 
 	case StateResolution:

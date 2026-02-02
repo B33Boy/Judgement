@@ -14,23 +14,34 @@ import (
 // ======================== Game ========================
 
 type GameParams struct {
-	round         Round
 	maxRounds     Round
 	cardsPerRound int
 }
 
+type GameState struct {
+	Round      Round                `json:"round"`
+	State      State                `json:"state"`
+	TurnPlayer t.PlayerID           `json:"turnPlayer"`
+	TrumpSuit  *Suit                `json:"trumpSuit"`
+	Table      map[t.PlayerID]*Card `json:"table"` // Cards currently played
+	Bids       map[t.PlayerID]Bid   `json:"bids"`
+	HandsWon   map[t.PlayerID]int   `json:"handsWon"`
+}
+
 type Game struct {
-	ctx        context.Context
-	cancel     context.CancelFunc
-	emit       func(t.GameOutput)
-	Players    PlayerMap
-	turnPlayer t.PlayerID
-	params     *GameParams
-	cycler     *PlayerCycler
-	sm         *StateMachine
-	scores     PlayerScore
-	cardstack  []*Card
-	sir        *Suit
+	// Engine
+	ctx    context.Context
+	cancel context.CancelFunc
+	emit   func(t.GameOutput)
+	cycler *PlayerCycler
+	sm     *StateMachine
+
+	// Data
+	Players   PlayerMap
+	params    *GameParams
+	state     *GameState
+	scores    PlayerScore // historical scores
+	cardstack []*Card
 }
 
 type SessionView interface {
@@ -59,13 +70,6 @@ func NewGame(session SessionView) *Game {
 
 	ctx, cancel := context.WithCancel(session.Context())
 
-	// Params
-	params := &GameParams{
-		round:         0,
-		maxRounds:     14,
-		cardsPerRound: 7,
-	}
-
 	// Cycler
 	cycler := NewPlayerCycler(gamePlayers)
 
@@ -73,6 +77,7 @@ func NewGame(session SessionView) *Game {
 	for id := range gamePlayers {
 		keys = append(keys, id)
 	}
+
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	firstPlayerID := keys[rng.Intn(len(keys))]
 
@@ -83,27 +88,42 @@ func NewGame(session SessionView) *Game {
 
 	// State Machine
 	sm := NewStateMachine(StateBid)
-
 	sm.AddTransition(StateBid, BiddingDone, StatePlay)
 	sm.AddTransition(StatePlay, PlayingDone, StateResolution)
 	sm.AddTransition(StateResolution, PlayingContinue, StateBid)
 	sm.AddTransition(StateResolution, PlayingDone, StateGameOver)
 
+	// Params
+	params := &GameParams{
+		maxRounds:     14,
+		cardsPerRound: 7,
+	}
+
+	gameState := &GameState{
+		Round:      0,
+		State:      StateBid,
+		TurnPlayer: firstPlayerID,
+		TrumpSuit:  nil,
+		Table:      make(map[t.PlayerID]*Card),
+		Bids:       make(map[t.PlayerID]Bid),
+		HandsWon:   make(map[t.PlayerID]int),
+	}
+
 	// Scores
-	scores := NewScoreboard(playerCnt, gamePlayers, params.maxRounds)
+	scoreboard := NewScoreboard(playerCnt, gamePlayers, params.maxRounds)
 
 	return &Game{
-		ctx:        ctx,
-		cancel:     cancel,
-		emit:       session.Emit,
-		Players:    gamePlayers,
-		turnPlayer: firstPlayerID,
-		params:     params,
-		cycler:     cycler,
-		sm:         sm,
-		scores:     scores,
-		cardstack:  make([]*Card, 0),
-		sir:        nil,
+		ctx:    ctx,
+		cancel: cancel,
+		emit:   session.Emit,
+		cycler: cycler,
+		sm:     sm,
+
+		Players:   gamePlayers,
+		params:    params,
+		state:     gameState,
+		scores:    scoreboard,
+		cardstack: make([]*Card, 0),
 	}
 }
 

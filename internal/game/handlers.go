@@ -23,7 +23,7 @@ func (g *Game) handleBid(input t.GameInput) {
 
 	g.recordBid(curPlayer, input)
 
-	g.turnPlayer = g.cyclePlayer()
+	g.state.TurnPlayer = g.cyclePlayer()
 
 	if g.cycler.CompletedCycle() {
 		g.sm.Trigger(BiddingDone)
@@ -80,7 +80,7 @@ func (g *Game) handlePlay(input t.GameInput) {
 	// Play card
 	// g.playCard(input.Player.ID, input.Card)
 
-	g.turnPlayer = g.cyclePlayer()
+	g.state.TurnPlayer = g.cyclePlayer()
 
 	if g.cycler.CompletedCycle() {
 		g.sm.Trigger(PlayingDone)
@@ -104,17 +104,17 @@ func (g *Game) updateRound() {
 		log.Println("Player cycle not completed, not updating round yet")
 		return
 	}
-	g.params.round++
+	g.state.Round++
 
-	if g.params.round > g.params.maxRounds {
+	if g.state.Round > g.params.maxRounds {
 		// state change to finished game
 		g.trigger(PlayingDone)
 	}
 }
 
 func (g *Game) verifyPlayerTurn(player *GamePlayer) error {
-	if player.ID != g.turnPlayer {
-		log.Printf("It is %s's turn!\n", g.Players[g.turnPlayer].PlayerName)
+	if player.ID != g.state.TurnPlayer {
+		log.Printf("It is %s's turn!\n", g.Players[g.state.TurnPlayer].PlayerName)
 		return errors.New("Incorrect player turn")
 	}
 	return nil
@@ -134,7 +134,7 @@ func (g *Game) isCardPlayable(player *GamePlayer, card Card) bool {
 	// You can play if same suite or sir, if you don't have either than you can play whatever card
 	cards_allowable := make([]Card, 0)
 	for _, playerCard := range player.Cards {
-		if sameSuit(playerCard, curTop) || playerCard.Suit == *g.sir {
+		if sameSuit(playerCard, curTop) || playerCard.Suit == *g.state.TrumpSuit {
 			// From the allowed cards, if the current is a
 			if playerCard == card {
 				log.Println("Card is either the same suit or the sir")

@@ -37,8 +37,8 @@ func (g *Game) sendCardsToPlayer(playerID t.PlayerID) {
 
 func (g *Game) sendRoundInfo() {
 	payload, _ := json.Marshal(RoundInfoPayload{
-		Round:      g.params.round,
-		TurnPlayer: g.Players[g.turnPlayer].PlayerName,
+		Round:      g.state.Round,
+		TurnPlayer: g.Players[g.state.TurnPlayer].PlayerName,
 		State:      g.sm.state,
 	})
 
