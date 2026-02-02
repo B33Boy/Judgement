@@ -25,3 +25,8 @@ func (g *Game) allPlayerIDs() []t.PlayerID {
 
 	return all_ids
 }
+
+func (g *Game) changeState(e Event) {
+	g.sm.Trigger(e)
+	g.state.State = g.sm.state
+}

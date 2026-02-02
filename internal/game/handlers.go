@@ -26,7 +26,7 @@ func (g *Game) handleBid(input t.GameInput) {
 	g.state.TurnPlayer = g.cyclePlayer()
 
 	if g.cycler.CompletedCycle() {
-		g.sm.Trigger(BiddingDone)
+		g.changeState(BiddingDone)
 	}
 
 	g.broadcastGameState()
@@ -83,7 +83,7 @@ func (g *Game) handlePlay(input t.GameInput) {
 	g.state.TurnPlayer = g.cyclePlayer()
 
 	if g.cycler.CompletedCycle() {
-		g.sm.Trigger(PlayingDone)
+		g.changeState(PlayingDone)
 		g.updateRound()
 	}
 	// g.broadcastCardPlayed(input.Player.ID, input.Card)
@@ -108,7 +108,7 @@ func (g *Game) updateRound() {
 
 	if g.state.Round > g.params.maxRounds {
 		// state change to finished game
-		g.trigger(PlayingDone)
+		g.changeState(GameDone)
 	}
 }
 

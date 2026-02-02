@@ -91,7 +91,7 @@ func NewGame(session SessionView) *Game {
 	sm.AddTransition(StateBid, BiddingDone, StatePlay)
 	sm.AddTransition(StatePlay, PlayingDone, StateResolution)
 	sm.AddTransition(StateResolution, PlayingContinue, StateBid)
-	sm.AddTransition(StateResolution, PlayingDone, StateGameOver)
+	sm.AddTransition(StateResolution, GameDone, StateGameOver)
 
 	// Params
 	params := &GameParams{
