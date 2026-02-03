@@ -30,7 +30,7 @@ export default function PlayerHand({ hand }: { hand: string[] }) {
         hand.map((card) => (
           <Draggable key={card} id={`card-${card}`}>
             <div className="card-item">
-              <Card name={card} />
+              <CardImg name={card} />
             </div>
           </Draggable>
         ))
@@ -41,6 +41,6 @@ export default function PlayerHand({ hand }: { hand: string[] }) {
   );
 }
 
-function Card({ name }: { name: string }) {
+export function CardImg({ name }: { name: string }) {
   return <img className="card-image" src={`/cards/${name}.svg`} alt={name} />;
 }

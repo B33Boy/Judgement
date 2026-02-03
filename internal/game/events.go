@@ -15,8 +15,7 @@ func (g *Game) sendGameStarted() {
 	})
 }
 
-func (g *Game) sendCardsToPlayer(playerID t.PlayerID) {
-	player := g.Players[playerID]
+func (g *Game) sendCardsToPlayer(player *GamePlayer) {
 
 	strHand := getStrHand(player.Cards)
 

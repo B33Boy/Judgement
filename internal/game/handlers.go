@@ -85,6 +85,7 @@ func (g *Game) handlePlay(input t.GameInput) {
 
 	// Play card
 	g.playCard(curPlayer, playedCard)
+	g.sendCardsToPlayer(curPlayer)
 
 	g.state.TurnPlayer = g.cyclePlayer()
 
@@ -176,7 +177,7 @@ func (g *Game) removeCardFromPlayer(player *GamePlayer, playedCard Card) {
 
 func (g *Game) addCardToTable(player *GamePlayer, card Card) {
 	g.cardstack = append(g.cardstack, card)
-	g.state.Table[player.ID] = card
+	g.state.Table[player.ID] = &card
 }
 
 func (g *Game) handleNoTrumpSuit(suit Suit) {

@@ -1,5 +1,13 @@
 import { useDroppable } from "@dnd-kit/core";
-import type { PlayerPublic, Players } from "../types";
+import {
+  rankFromValue,
+  suitFromValue,
+  type Card,
+  type GameState,
+  type PlayerPublic,
+  type Players,
+} from "../types";
+import { CardImg } from "./PlayerHand";
 
 function Droppable(props: any) {
   const { isOver, setNodeRef } = useDroppable({ id: props.id });
@@ -18,14 +26,19 @@ function Droppable(props: any) {
 
 type GameTableProps = {
   players: Players;
-  turnPlayer: string;
+  gameState: GameState;
 };
 
-export default function GameTable({ players, turnPlayer }: GameTableProps) {
+export default function GameTable({ players, gameState }: GameTableProps) {
   return (
     <div className="table">
       {players.map((p: PlayerPublic) => (
-        <TableEntry key={p.id} player={p} isCurrentTurn={p.id === turnPlayer} />
+        <TableEntry
+          key={p.id}
+          player={p}
+          isCurrentTurn={p.id === gameState.turnPlayer}
+          card={gameState.table[p.id]}
+        />
       ))}
     </div>
   );
@@ -34,15 +47,18 @@ export default function GameTable({ players, turnPlayer }: GameTableProps) {
 type TableEntryProps = {
   player: PlayerPublic;
   isCurrentTurn: boolean;
+  card?: Card;
 };
 
-function TableEntry({ player, isCurrentTurn }: TableEntryProps) {
+function TableEntry({ player, isCurrentTurn, card }: TableEntryProps) {
   const content = (
     <div
       className={`table-entry-container ${isCurrentTurn ? "current-turn" : ""}`}
     >
       <p className="player-name">{player.name}</p>
-      <div className="table-entry"></div>
+      <div className="table-entry">
+        {card && <CardImg name={cardToImgName(card)} />}
+      </div>
     </div>
   );
 
@@ -51,4 +67,15 @@ function TableEntry({ player, isCurrentTurn }: TableEntryProps) {
   ) : (
     content
   );
+}
+
+export function cardToImgName(card: Card): string {
+  const suit = suitFromValue[card.suit];
+  const rank = rankFromValue[card.rank];
+
+  if (!suit || !rank) {
+    throw new Error(`Invalid card: ${JSON.stringify(card)}`);
+  }
+
+  return `${suit}-${rank}`;
 }

@@ -10,7 +10,6 @@ export default function RoundData({
       {gameState ? (
         <div>
           <p>Round: {gameState.round}</p>
-          <p>Turn: {gameState.turnPlayer}</p>
           <p>State: {gameState.state}</p>
         </div>
       ) : (

@@ -19,13 +19,13 @@ type GameParams struct {
 }
 
 type GameState struct {
-	Round      Round               `json:"round"`
-	State      State               `json:"state"`
-	TurnPlayer t.PlayerID          `json:"turnPlayer"`
-	TrumpSuit  *Suit               `json:"trumpSuit"`
-	Table      map[t.PlayerID]Card `json:"table"` // Cards currently played
-	Bids       map[t.PlayerID]Bid  `json:"bids"`
-	HandsWon   map[t.PlayerID]int  `json:"handsWon"`
+	Round      Round                `json:"round"`
+	State      State                `json:"state"`
+	TurnPlayer t.PlayerID           `json:"turnPlayer"`
+	TrumpSuit  *Suit                `json:"trumpSuit"`
+	Table      map[t.PlayerID]*Card `json:"table"` // Cards currently played
+	Bids       map[t.PlayerID]Bid   `json:"bids"`
+	HandsWon   map[t.PlayerID]int   `json:"handsWon"`
 }
 
 type Game struct {
@@ -104,7 +104,7 @@ func NewGame(session SessionView) *Game {
 		State:      StateBid,
 		TurnPlayer: firstPlayerID,
 		TrumpSuit:  nil,
-		Table:      make(map[t.PlayerID]Card),
+		Table:      make(map[t.PlayerID]*Card),
 		Bids:       make(map[t.PlayerID]Bid),
 		HandsWon:   make(map[t.PlayerID]int),
 	}
@@ -131,8 +131,8 @@ func (g *Game) Start() {
 
 	g.sendGameStarted()
 
-	for _, id := range g.allPlayerIDs() {
-		g.sendCardsToPlayer(id)
+	for _, player := range g.Players {
+		g.sendCardsToPlayer(player)
 	}
 
 	// Send Round # and Send Turn PlayerId

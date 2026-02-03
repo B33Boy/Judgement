@@ -38,7 +38,8 @@ export default function GamePage() {
   const isBiddingTurn =
     gameState?.state === "bidding" && gameState?.turnPlayer === playerId;
 
-  const isPlaying = gameState?.state === "playing";
+  const isPlaying =
+    gameState?.state === "playing" || gameState?.state === "resolution";
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -77,9 +78,7 @@ export default function GamePage() {
 
         <div className="action">
           {isBiddingTurn && <BidBox msgFunction={sendMessage} />}
-          {isPlaying && (
-            <GameTable players={players} turnPlayer={gameState.turnPlayer} />
-          )}
+          {isPlaying && <GameTable players={players} gameState={gameState} />}
         </div>
 
         <div className="hand">
