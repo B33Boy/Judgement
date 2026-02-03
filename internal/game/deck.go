@@ -51,16 +51,24 @@ func (c Card) String() string {
 	return c.Suit.String() + "-" + c.Rank.String()
 }
 
-func higherRank(a, b Card) bool {
-	return a.Rank > b.Rank
-}
-
 func sameSuit(a, b Card) bool {
 	return a.Suit == b.Suit
 }
 
-func (card *Card) greater_than(other *Card) bool {
-	return sameSuit(*card, *other) && higherRank(*card, *other)
+func sameRank(a, b Card) bool {
+	return a.Rank == b.Rank
+}
+
+func higherRank(a, b Card) bool {
+	return a.Rank > b.Rank
+}
+
+func (card Card) GreaterThan(other Card) bool {
+	return sameSuit(card, other) && higherRank(card, other)
+}
+
+func (card Card) Equals(other Card) bool {
+	return sameSuit(card, other) && sameRank(card, other)
 }
 
 // ================================== Card ==================================

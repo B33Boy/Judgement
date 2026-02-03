@@ -17,7 +17,8 @@ func (g *Game) handleBid(input t.GameInput) {
 	}
 
 	curPlayer := g.Players[input.Player.ID]
-	if g.verifyPlayerTurn(curPlayer) != nil {
+	if err := g.verifyPlayerTurn(curPlayer); err != nil {
+		log.Printf("HandleBid: %v", err)
 		return
 	}
 
@@ -43,7 +44,6 @@ func (g *Game) recordBid(curPlayer *GamePlayer, input t.GameInput) {
 	}
 
 	// Logic to check if bid is possible
-	// If not possible send message back
 
 	curPlayer.Bid = &payload.Bid
 }
@@ -67,24 +67,29 @@ func (g *Game) handlePlay(input t.GameInput) {
 
 	// Get player from input and ensure that it is their turn
 	curPlayer := g.Players[input.Player.ID]
-	if g.verifyPlayerTurn(curPlayer) != nil {
-		g.sendInvalidMove(input.Player.ID, "Not your turn")
+	if err := g.verifyPlayerTurn(curPlayer); err != nil {
+		// g.sendInvalidMove(input.Player.ID, "Not your turn")
+		log.Printf("HandlePlay: %v", err)
 		return
 	}
 
+	// For rounds where we start of with no trump suit
+	g.handleNoTrumpSuit(playedCard.Suit)
+
 	// // check if card is playable
 	if !g.isCardPlayable(curPlayer, playedCard) {
-		g.sendInvalidMove(input.Player.ID, "Card cannot be played")
+		// g.sendInvalidMove(input.Player.ID, "Card cannot be played")
+		log.Printf("Card not playable: %v", playedCard)
 		return
 	}
+
 	// Play card
-	// g.playCard(input.Player.ID, input.Card)
+	g.playCard(curPlayer, playedCard)
 
 	g.state.TurnPlayer = g.cyclePlayer()
 
 	if g.cycler.CompletedCycle() {
 		g.changeState(PlayingDone)
-		g.updateRound()
 	}
 	// g.broadcastCardPlayed(input.Player.ID, input.Card)
 	g.broadcastGameState()
@@ -123,31 +128,61 @@ func (g *Game) verifyPlayerTurn(player *GamePlayer) error {
 func (g *Game) isCardPlayable(player *GamePlayer, card Card) bool {
 
 	// If there are no cards on the cardstack, any card is playable
-	num_cards := len(g.cardstack)
-	if num_cards == 0 {
+	if len(g.cardstack) == 0 {
 		return true
 	}
+	curTop := g.cardstack[len(g.cardstack)-1]
 
-	curTop := *g.cardstack[num_cards-1]
+	trump := g.state.TrumpSuit
+	hasTrump := trump != nil
 
-	// Check if player has other cards in the hand that they can play
-	// You can play if same suite or sir, if you don't have either than you can play whatever card
-	cards_allowable := make([]Card, 0)
+	hasLegalAlternative := false
+
 	for _, playerCard := range player.Cards {
-		if sameSuit(playerCard, curTop) || playerCard.Suit == *g.state.TrumpSuit {
-			// From the allowed cards, if the current is a
-			if playerCard == card {
-				log.Println("Card is either the same suit or the sir")
+		if sameSuit(playerCard, curTop) || (hasTrump && playerCard.Suit == *trump) {
+
+			hasLegalAlternative = true
+
+			// If the played card is one of them, allow
+			if playerCard.Equals(card) {
+				log.Println("Card follows suit or trump")
 				return true
 			}
-			cards_allowable = append(cards_allowable, playerCard)
 		}
 	}
 
-	if len(cards_allowable) == 0 {
-		log.Println("Card is a fish")
-		return true // fish - any card is allowed
+	// If no legal alternatives exist, player can play anything
+	if !hasLegalAlternative {
+		log.Println("No matching suit or trump, any card allowed")
+		return true
 	}
 
-	return false
+	return false // had legal option but player didn't use it
+}
+
+func (g *Game) playCard(player *GamePlayer, card Card) {
+	g.removeCardFromPlayer(player, card)
+	g.addCardToTable(player, card)
+}
+
+func (g *Game) removeCardFromPlayer(player *GamePlayer, playedCard Card) {
+	for i, handCard := range player.Cards {
+		if handCard.Equals(playedCard) {
+			player.Cards = append(player.Cards[:i], player.Cards[i+1:]...)
+			return
+		}
+	}
+}
+
+func (g *Game) addCardToTable(player *GamePlayer, card Card) {
+	g.cardstack = append(g.cardstack, card)
+	g.state.Table[player.ID] = card
+}
+
+func (g *Game) handleNoTrumpSuit(suit Suit) {
+	trump := g.state.TrumpSuit
+	if trump == nil {
+		// Make current card (initial) the trump suit
+		g.state.TrumpSuit = &suit
+	}
 }
