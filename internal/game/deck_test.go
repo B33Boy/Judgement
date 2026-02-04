@@ -12,7 +12,10 @@ func TestNewDeck(t *testing.T) {
 		t.Errorf("Expected 52 cards, got %d", len(deck))
 	}
 
-	expectedCard := "SPADE-ACE"
+	expectedCard := Card{
+		Suit: Spade,
+		Rank: Ace,
+	}
 	found := false
 	for _, card := range deck {
 		if card == expectedCard {
