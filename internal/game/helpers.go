@@ -27,6 +27,6 @@ func (g *Game) allPlayerIDs() []t.PlayerID {
 }
 
 func (g *Game) changeState(e Event) {
-	g.sm.Trigger(e)
+	g.trigger(e)
 	g.state.State = g.sm.state
 }
