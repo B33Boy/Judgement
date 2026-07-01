@@ -54,7 +54,13 @@ func NewGame(session SessionView) *Game {
 	players := session.GetPlayers()
 	playerCnt := len(players)
 
-	hands := getHands(playerCnt)
+	// Params needs to be created before we use cardsPerRound
+	params := &GameParams{
+		maxRounds:     14,
+		cardsPerRound: 7,
+	}
+
+	hands := getHands(playerCnt, int(params.cardsPerRound))
 	gamePlayers := make(PlayerMap)
 
 	i := 0
@@ -92,12 +98,6 @@ func NewGame(session SessionView) *Game {
 	sm.AddTransition(StatePlay, PlayingDone, StateResolution)
 	sm.AddTransition(StateResolution, PlayingContinue, StateBid)
 	sm.AddTransition(StateResolution, GameDone, StateGameOver)
-
-	// Params
-	params := &GameParams{
-		maxRounds:     14,
-		cardsPerRound: 7,
-	}
 
 	gameState := &GameState{
 		Round:      0,

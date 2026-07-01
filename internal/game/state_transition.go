@@ -23,6 +23,9 @@ func (g *Game) onStateChanged(from, to State) {
 		log.Println("StateBid")
 
 	case StatePlay:
+		// Clear state from previous trick/round
+		g.cardstack = make([]Card, 0)
+		g.state.Table = make(map[t.PlayerID]*Card)
 		g.cycler.StartFrom(g.state.TurnPlayer)
 		log.Println("StatePlay")
 

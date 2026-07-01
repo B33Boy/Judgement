@@ -97,6 +97,13 @@ func (g *Game) handlePlay(input t.GameInput) {
 }
 
 func (g *Game) handleResolution(input t.GameInput) {
+	// Determine winner of the trick (highest card of lead suit or trump)
+	// TODO: Implement winner determination logic
+	// winnerID := g.determineTrickWinner()
+	// if winnerID != "" {
+	// 	g.state.HandsWon[winnerID]++
+	// }
+
 	// Update scores and send to frontend
 	// call StartFrom() to start from the winning player
 	// call UpdateRound() here

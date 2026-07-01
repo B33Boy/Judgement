@@ -105,9 +105,8 @@ func shuffleDeck(cards Deck) {
 	}
 }
 
-func distributeCards(deck Deck, playerCnt int) []Hand {
+func distributeCards(deck Deck, playerCnt int, cardsPerPlayer int) []Hand {
 	playerHands := make([]Hand, playerCnt)
-	cardsPerPlayer := 7
 
 	for i := 0; i < playerCnt; i++ {
 		start := i * cardsPerPlayer
@@ -119,8 +118,8 @@ func distributeCards(deck Deck, playerCnt int) []Hand {
 	return playerHands
 }
 
-func getHands(playerCount int) []Hand {
+func getHands(playerCount int, cardsPerRound int) []Hand {
 	deck := newDeck()
 	shuffleDeck(deck)
-	return distributeCards(deck, playerCount)
+	return distributeCards(deck, playerCount, cardsPerRound)
 }

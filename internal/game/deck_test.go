@@ -56,7 +56,7 @@ func TestDistributeCards(t *testing.T) {
 	playerCount := 3
 	expectedCardsPerPlayer := 7
 
-	hands := distributeCards(deck, playerCount)
+	hands := distributeCards(deck, playerCount, expectedCardsPerPlayer)
 
 	if len(hands) != playerCount {
 		t.Errorf("Expected %d hands, got %d", playerCount, len(hands))
