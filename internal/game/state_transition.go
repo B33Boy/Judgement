@@ -2,7 +2,11 @@ package game
 
 // Logic flow based on generic State Machine
 
-import "log"
+import (
+	"log"
+
+	t "github.com/B33Boy/Judgement/internal/types"
+)
 
 func (g *Game) trigger(event Event) {
 	prev := g.sm.state
@@ -31,6 +35,10 @@ func (g *Game) onStateChanged(from, to State) {
 
 	case StateResolution:
 		log.Println("StateResolution")
+		// Resolution has no client-driven input - run it immediately as
+		// part of the transition rather than waiting for a message that
+		// will never arrive.
+		g.handleResolution()
 
 	case StateGameOver:
 		log.Println("StateGameOver")

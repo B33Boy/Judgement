@@ -13,9 +13,12 @@ import (
 
 // ======================== Game ========================
 
+// roundSchedule defines how many cards are dealt each round: a pyramid
+// that shrinks from 7 down to 1 and back up to 7 (14 rounds total).
+var roundSchedule = []int{7, 6, 5, 4, 3, 2, 1, 1, 2, 3, 4, 5, 6, 7}
+
 type GameParams struct {
-	maxRounds     Round
-	cardsPerRound int
+	roundSchedule []int
 }
 
 type GameState struct {
@@ -26,6 +29,7 @@ type GameState struct {
 	Table      map[t.PlayerID]*Card `json:"table"` // Cards currently played
 	Bids       map[t.PlayerID]Bid   `json:"bids"`
 	HandsWon   map[t.PlayerID]int   `json:"handsWon"`
+	Scores     PlayerScore          `json:"scores"`
 }
 
 type Game struct {
@@ -37,11 +41,13 @@ type Game struct {
 	sm     *StateMachine
 
 	// Data
-	Players   PlayerMap
-	params    *GameParams
-	state     *GameState
-	scores    PlayerScore // historical scores
-	cardstack []Card
+	Players     PlayerMap
+	playerOrder []t.PlayerID // fixed seating order, used to rotate the round starter
+	dealerIdx   int
+	params      *GameParams
+	state       *GameState
+	scores      PlayerScore // historical scores
+	cardstack   []Card
 }
 
 type SessionView interface {
@@ -54,13 +60,12 @@ func NewGame(session SessionView) *Game {
 	players := session.GetPlayers()
 	playerCnt := len(players)
 
-	// Params needs to be created before we use cardsPerRound
+	// Params needs to be created before we use roundSchedule
 	params := &GameParams{
-		maxRounds:     14,
-		cardsPerRound: 7,
+		roundSchedule: roundSchedule,
 	}
 
-	hands := getHands(playerCnt, int(params.cardsPerRound))
+	hands := getHands(playerCnt, params.roundSchedule[0])
 	gamePlayers := make(PlayerMap)
 
 	i := 0
@@ -85,7 +90,8 @@ func NewGame(session SessionView) *Game {
 	}
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	firstPlayerID := keys[rng.Intn(len(keys))]
+	firstIdx := rng.Intn(len(keys))
+	firstPlayerID := keys[firstIdx]
 
 	err := cycler.StartFrom(firstPlayerID)
 	if err != nil {
@@ -96,8 +102,12 @@ func NewGame(session SessionView) *Game {
 	sm := NewStateMachine(StateBid)
 	sm.AddTransition(StateBid, BiddingDone, StatePlay)
 	sm.AddTransition(StatePlay, PlayingDone, StateResolution)
+	sm.AddTransition(StateResolution, TrickContinue, StatePlay)
 	sm.AddTransition(StateResolution, PlayingContinue, StateBid)
 	sm.AddTransition(StateResolution, GameDone, StateGameOver)
+
+	// Scores
+	scoreboard := NewScoreboard(playerCnt, gamePlayers, Round(len(params.roundSchedule)))
 
 	gameState := &GameState{
 		Round:      0,
@@ -107,10 +117,8 @@ func NewGame(session SessionView) *Game {
 		Table:      make(map[t.PlayerID]*Card),
 		Bids:       make(map[t.PlayerID]Bid),
 		HandsWon:   make(map[t.PlayerID]int),
+		Scores:     scoreboard,
 	}
-
-	// Scores
-	scoreboard := NewScoreboard(playerCnt, gamePlayers, params.maxRounds)
 
 	return &Game{
 		ctx:    ctx,
@@ -119,11 +127,13 @@ func NewGame(session SessionView) *Game {
 		cycler: cycler,
 		sm:     sm,
 
-		Players:   gamePlayers,
-		params:    params,
-		state:     gameState,
-		scores:    scoreboard,
-		cardstack: make([]Card, 0),
+		Players:     gamePlayers,
+		playerOrder: keys,
+		dealerIdx:   firstIdx,
+		params:      params,
+		state:       gameState,
+		scores:      scoreboard,
+		cardstack:   make([]Card, 0),
 	}
 }
 
@@ -147,7 +157,7 @@ func (g *Game) HandleGameInput(input t.GameInput) {
 	case StatePlay:
 		g.handlePlay(input)
 
-	case StateResolution:
-		g.handleResolution(input)
+	// StateResolution and StateGameOver are not client-driven - any input
+	// received while in those states is simply ignored.
 	}
 }

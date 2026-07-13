@@ -8,7 +8,7 @@ export default function ScoreTable({
   if (!gameState) return;
 
   const NUM_ROUNDS = 14;
-  // const entries = Array.from(scores.entries());
+  const entries = Object.entries(gameState.scores ?? {});
 
   return (
     <table className="score-table">

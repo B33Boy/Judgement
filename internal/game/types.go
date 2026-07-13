@@ -33,6 +33,7 @@ const (
 	BiddingDone     Event = "bidding_done"
 	PlayingContinue Event = "playing_continue"
 	PlayingDone     Event = "playing_done"
+	TrickContinue   Event = "trick_continue"
 	GameDone        Event = "game_done"
 	RoundResolved   Event = "round_resolved"
 )

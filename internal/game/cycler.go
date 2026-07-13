@@ -60,3 +60,13 @@ func (pc *PlayerCycler) CompletedCycle() bool {
 	}
 	return pc.index == pc.startIndex
 }
+
+// WillCompleteNext reports whether the player at the current index is the
+// last one left in this cycle, i.e. the next call to Next() would complete
+// it. Unlike CompletedCycle, this doesn't require calling Next() first.
+func (pc *PlayerCycler) WillCompleteNext() bool {
+	if len(pc.keys) == 0 {
+		return false
+	}
+	return (pc.index+1)%len(pc.keys) == pc.startIndex
+}

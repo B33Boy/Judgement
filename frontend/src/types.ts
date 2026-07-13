@@ -9,12 +9,14 @@ export interface WSEnvelope {
     | "players_update"
     | "game_started"
     | "error"
+    | "invalid_action"
     | "start_game"
     | "player_hand"
     | "round_info"
     | "make_bid"
     | "play_card"
-    | "state_sync";
+    | "state_sync"
+    | "game_end";
   payload?: any;
 }
 
@@ -26,6 +28,7 @@ export interface GameState {
   table: Record<string, string | undefined>; // PlayerID -> CardID
   bids: Record<string, number>; // PlayerID -> bid
   handsWon: Record<string, number>; // PlayerID -> number hands won this
+  scores: Record<string, number[]>; // PlayerID -> score per round
 }
 
 export type PlayerPublic = {

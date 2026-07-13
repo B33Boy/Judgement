@@ -5,6 +5,7 @@ package game
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 
 	t "github.com/B33Boy/Judgement/internal/types"
@@ -22,7 +23,19 @@ func (g *Game) handleBid(input t.GameInput) {
 		return
 	}
 
-	g.recordBid(curPlayer, input)
+	var payload MakeBid
+	if err := json.Unmarshal(input.Env.Payload, &payload); err != nil {
+		log.Println("Cannot unmarshall MakeBid")
+		return
+	}
+
+	if err := g.validateBid(curPlayer, payload.Bid); err != nil {
+		g.sendInvalidMove(curPlayer.ID, err.Error())
+		return
+	}
+
+	curPlayer.Bid = &payload.Bid
+	g.state.Bids[curPlayer.ID] = payload.Bid
 
 	g.state.TurnPlayer = g.cyclePlayer()
 
@@ -33,19 +46,27 @@ func (g *Game) handleBid(input t.GameInput) {
 	g.broadcastGameState()
 }
 
-func (g *Game) recordBid(curPlayer *GamePlayer, input t.GameInput) {
+// validateBid enforces the bid range and the "hook" rule: the last bidder
+// in a round cannot bid a number that makes the total of all bids equal
+// the number of cards dealt this round.
+func (g *Game) validateBid(curPlayer *GamePlayer, bid Bid) error {
+	cardsInHand := len(curPlayer.Cards)
 
-	var payload MakeBid
-	err := json.Unmarshal(input.Env.Payload, &payload)
-
-	if err != nil {
-		log.Println("Cannot unmarshall MakeBid")
-		return
+	if bid < 0 || int(bid) > cardsInHand {
+		return fmt.Errorf("bid must be between 0 and %d", cardsInHand)
 	}
 
-	// Logic to check if bid is possible
+	if g.cycler.WillCompleteNext() {
+		sum := Bid(0)
+		for _, b := range g.state.Bids {
+			sum += b
+		}
+		if int(sum+bid) == cardsInHand {
+			return fmt.Errorf("bid cannot make total bids equal %d", cardsInHand)
+		}
+	}
 
-	curPlayer.Bid = &payload.Bid
+	return nil
 }
 
 func (g *Game) handlePlay(input t.GameInput) {
@@ -68,7 +89,7 @@ func (g *Game) handlePlay(input t.GameInput) {
 	// Get player from input and ensure that it is their turn
 	curPlayer := g.Players[input.Player.ID]
 	if err := g.verifyPlayerTurn(curPlayer); err != nil {
-		// g.sendInvalidMove(input.Player.ID, "Not your turn")
+		g.sendInvalidMove(input.Player.ID, "Not your turn")
 		log.Printf("HandlePlay: %v", err)
 		return
 	}
@@ -76,9 +97,9 @@ func (g *Game) handlePlay(input t.GameInput) {
 	// For rounds where we start of with no trump suit
 	g.handleNoTrumpSuit(playedCard.Suit)
 
-	// // check if card is playable
+	// check if card is playable
 	if !g.isCardPlayable(curPlayer, playedCard) {
-		// g.sendInvalidMove(input.Player.ID, "Card cannot be played")
+		g.sendInvalidMove(input.Player.ID, "Card cannot be played")
 		log.Printf("Card not playable: %v", playedCard)
 		return
 	}
@@ -92,37 +113,24 @@ func (g *Game) handlePlay(input t.GameInput) {
 	if g.cycler.CompletedCycle() {
 		g.changeState(PlayingDone)
 	}
-	// g.broadcastCardPlayed(input.Player.ID, input.Card)
 	g.broadcastGameState()
 }
 
-func (g *Game) handleResolution(input t.GameInput) {
-	// Determine winner of the trick (highest card of lead suit or trump)
-	// TODO: Implement winner determination logic
-	// winnerID := g.determineTrickWinner()
-	// if winnerID != "" {
-	// 	g.state.HandsWon[winnerID]++
-	// }
+func (g *Game) handleResolution() {
+	winnerID := g.determineTrickWinner()
+	g.state.HandsWon[winnerID]++
+	g.state.TurnPlayer = winnerID
 
-	// Update scores and send to frontend
-	// call StartFrom() to start from the winning player
-	// call UpdateRound() here
-	g.updateRound()
-}
-
-func (g *Game) updateRound() {
-	// Run this after every player turn, it will only update round when we return back to first player
-	completed := g.cycler.CompletedCycle()
-	if !completed {
-		log.Println("Player cycle not completed, not updating round yet")
+	if !g.roundComplete() {
+		// More tricks left this round - lead the next one from the winner.
+		// onStateChanged's StatePlay case clears the table/cardstack and
+		// restarts the cycler from g.state.TurnPlayer.
+		g.changeState(TrickContinue)
+		g.broadcastGameState()
 		return
 	}
-	g.state.Round++
 
-	if g.state.Round > g.params.maxRounds {
-		// state change to finished game
-		g.changeState(GameDone)
-	}
+	g.finishRound()
 }
 
 func (g *Game) verifyPlayerTurn(player *GamePlayer) error {
@@ -133,39 +141,32 @@ func (g *Game) verifyPlayerTurn(player *GamePlayer) error {
 	return nil
 }
 
+// isCardPlayable enforces follow-suit: a player must play the suit that
+// was led if they hold one. Trump has no bearing on legality - it only
+// matters for winning the trick - so it's only a legal substitute once the
+// player has no card of the led suit at all.
 func (g *Game) isCardPlayable(player *GamePlayer, card Card) bool {
 
-	// If there are no cards on the cardstack, any card is playable
+	// Leading the trick - any card is playable.
 	if len(g.cardstack) == 0 {
 		return true
 	}
-	curTop := g.cardstack[len(g.cardstack)-1]
+	ledSuit := g.cardstack[0].Suit
 
-	trump := g.state.TrumpSuit
-	hasTrump := trump != nil
-
-	hasLegalAlternative := false
-
+	hasLedSuit := false
 	for _, playerCard := range player.Cards {
-		if sameSuit(playerCard, curTop) || (hasTrump && playerCard.Suit == *trump) {
-
-			hasLegalAlternative = true
-
-			// If the played card is one of them, allow
-			if playerCard.Equals(card) {
-				log.Println("Card follows suit or trump")
-				return true
-			}
+		if playerCard.Suit == ledSuit {
+			hasLedSuit = true
+			break
 		}
 	}
 
-	// If no legal alternatives exist, player can play anything
-	if !hasLegalAlternative {
-		log.Println("No matching suit or trump, any card allowed")
-		return true
+	if hasLedSuit {
+		return card.Suit == ledSuit
 	}
 
-	return false // had legal option but player didn't use it
+	// No card of the led suit - anything (including trump) is legal.
+	return true
 }
 
 func (g *Game) playCard(player *GamePlayer, card Card) {

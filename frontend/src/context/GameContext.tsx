@@ -89,6 +89,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
             break;
 
           case "error":
+          case "invalid_action":
             alert(msg.payload.message);
             break;
         }

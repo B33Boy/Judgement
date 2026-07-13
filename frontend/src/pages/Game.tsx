@@ -4,7 +4,7 @@ import { useGame } from "../context/GameContext";
 
 import SessionBox from "../components/SessionBox";
 import RoundData from "../components/RoundData";
-// import ScoreTable from "../components/ScoreTable";
+import ScoreTable from "../components/ScoreTable";
 import BidBox from "../components/BidBox";
 import GameTable from "../components/GameTable";
 import PlayerHand from "../components/PlayerHand";
@@ -72,9 +72,9 @@ export default function GamePage() {
           <RoundData gameState={gameState} />
         </div>
 
-        {/* <div className="score">
-          <ScoreTable scores={gameState} />
-        </div> */}
+        <div className="score">
+          <ScoreTable gameState={gameState} />
+        </div>
 
         <div className="action">
           {isBiddingTurn && <BidBox msgFunction={sendMessage} />}

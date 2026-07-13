@@ -54,3 +54,31 @@ func TestPlayerCycler(t *testing.T) {
 		t.Errorf("Expected error when starting from non-existent player")
 	}
 }
+
+func TestPlayerCycler_WillCompleteNext(t *testing.T) {
+	players := PlayerMap{
+		"a": &GamePlayer{ID: "a"},
+		"b": &GamePlayer{ID: "b"},
+		"c": &GamePlayer{ID: "c"},
+	}
+
+	cycler := NewPlayerCycler(players)
+	if err := cycler.StartFrom("a"); err != nil {
+		t.Fatalf("StartFrom failed: %v", err)
+	}
+
+	// "a" is current (index==startIndex); two more players left ("b","c").
+	if cycler.WillCompleteNext() {
+		t.Errorf("Expected WillCompleteNext false right after StartFrom")
+	}
+
+	cycler.Next() // -> b
+	if cycler.WillCompleteNext() {
+		t.Errorf("Expected WillCompleteNext false with one player still to go")
+	}
+
+	cycler.Next() // -> c, the last player before wrapping to "a"
+	if !cycler.WillCompleteNext() {
+		t.Errorf("Expected WillCompleteNext true for the last player in the cycle")
+	}
+}
