@@ -41,6 +41,28 @@ across reconnects.
 `SessionStore` (`session_store.go`) is just a mutex-guarded
 `map[string]*Session` keyed by an 8-character random ID.
 
+### Join/start gating
+
+Two invariants are enforced before a `Game` gets created:
+
+- **Player count**: `start_game` is rejected via `validatePlayerCount`
+  unless `game.MinPlayers..game.MaxPlayers` (3–7) players are present —
+  `MaxPlayers` is a hard constraint of the round schedule (52-card deck /
+  7-card max hand).
+- **No joins after start**: `Session.AddPlayer` rejects any join once a
+  game exists (`ws.go` then sends `invalid_action` and closes the socket).
+  This is the fix for a real crash: previously a player joining mid-game
+  would land in `s.players` but never in `game.Players` (the game
+  snapshots players once, at `NewGame`), so their first `make_bid`/
+  `play_card` would nil-pointer-dereference in `verifyPlayerTurn` and take
+  the whole session goroutine down.
+
+  Worth knowing: `AddPlayer` runs on a per-connection goroutine, not
+  `Session.run`'s goroutine, so the "has the game started" check can't
+  reuse `s.mu` — `NewGame` calls back into `GetPlayers()`, which also
+  locks `s.mu`, so sharing the lock would deadlock. It's guarded by a
+  separate `gameStarted atomic.Bool` instead.
+
 ## Game engine (`internal/game`)
 
 `Game` (`game.go`) is constructed once per session, when the first
@@ -140,14 +162,19 @@ edit.
 
 ## Known gaps (as of this writing)
 
-- `BidBox` always renders bid buttons `0..7` regardless of the actual
-  hand size for the round — backend now rejects out-of-range bids, so
-  it's safe but confusing UX on small rounds.
-- `GameTable.tsx` has a real type error: `gameState.table[p.id]` is typed
-  `string | undefined` but `TableEntry` expects a `Card` — pre-existing,
-  not yet fixed.
-- A handful of pre-existing lint errors (`no-explicit-any` on the message
-  payload types, a conditionally-called `useEffect` in `Game.tsx`).
 - No reconnect/resume story — a dropped socket loses that player's seat
   (a fresh UUID is minted on reconnect, so the game engine has no way to
-  recognize "the same person came back").
+  recognize "the same person came back"). This is the big remaining one;
+  everything else below is small.
+- No "game over" screen — `game_end`/`state==gameover` render as raw
+  score numbers via `ScoreTable`, nothing more.
+- Trump suit is in `gameState.trumpSuit` but never shown in the UI.
+- No turn indicator during bidding (`GameTable`'s highlight only exists
+  once `isPlaying`).
+- `invalid_action` triggers a plain browser `alert()`.
+- Lobby has no host/ready concept — any connected player can hit Start.
+- A handful of pre-existing lint errors remain (`no-explicit-any` on the
+  message payload types in `GameContext.tsx`/`types.ts`, a
+  conditionally-called `useEffect` in `Game.tsx`/`Session.tsx` — real
+  rules-of-hooks violations, not yet triggering visible bugs but worth
+  fixing before the UI rework).

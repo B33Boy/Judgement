@@ -37,6 +37,16 @@ func (a *App) wsHandler(w http.ResponseWriter, r *http.Request) {
 
 	player := NewPlayer(playerName, conn)
 
+	if err := session.AddPlayer(player); err != nil {
+		log.Printf("rejecting %s from session %s: %v", playerName, sessionId, err)
+		_ = wsjson.Write(r.Context(), conn, t.Envelope{
+			Type:    t.MsgInvalidAction,
+			Payload: mustMarshal(InvalidActionPayload{Message: err.Error()}),
+		})
+		conn.Close(websocket.StatusPolicyViolation, err.Error())
+		return
+	}
+
 	defer func() {
 		player.Cancel() // stops write loop
 		conn.Close(websocket.StatusNormalClosure, "")
@@ -92,7 +102,6 @@ func (a *App) wsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func onPlayerJoin(session *Session, player *t.Player) {
-	session.AddPlayer(player)
 	sendWelcome(player, session)
 	broadcastPlayersUpdate(session)
 	log.Printf("Player (%v) added to session (%v)\n", player.PlayerName, session.ID)

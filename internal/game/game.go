@@ -157,7 +157,7 @@ func (g *Game) HandleGameInput(input t.GameInput) {
 	case StatePlay:
 		g.handlePlay(input)
 
-	// StateResolution and StateGameOver are not client-driven - any input
-	// received while in those states is simply ignored.
+		// StateResolution and StateGameOver are not client-driven - any input
+		// received while in those states is simply ignored.
 	}
 }

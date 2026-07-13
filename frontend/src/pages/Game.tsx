@@ -77,7 +77,9 @@ export default function GamePage() {
         </div>
 
         <div className="action">
-          {isBiddingTurn && <BidBox msgFunction={sendMessage} />}
+          {isBiddingTurn && (
+            <BidBox msgFunction={sendMessage} maxBid={hand.length} />
+          )}
           {isPlaying && <GameTable players={players} gameState={gameState} />}
         </div>
 

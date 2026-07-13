@@ -2,8 +2,10 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
+	"sync/atomic"
 
 	g "github.com/B33Boy/Judgement/internal/game"
 	t "github.com/B33Boy/Judgement/internal/types"
@@ -35,6 +37,11 @@ type Session struct {
 	outputs chan t.GameOutput
 
 	game *g.Game
+	// gameStarted mirrors "game != nil" for AddPlayer, which runs on a
+	// different goroutine (one per connection) than the run() loop that
+	// owns game. A plain bool guarded by mu would deadlock: NewGame calls
+	// back into GetPlayers, which also locks mu.
+	gameStarted atomic.Bool
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -63,7 +70,11 @@ func NewSession(sessionId string) *Session {
 	return s
 }
 
-func (s *Session) AddPlayer(player *t.Player) {
+func (s *Session) AddPlayer(player *t.Player) error {
+	if s.gameStarted.Load() {
+		return fmt.Errorf("game already in progress")
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -74,6 +85,7 @@ func (s *Session) AddPlayer(player *t.Player) {
 	}
 
 	s.players[player.ID] = player
+	return nil
 }
 
 func (s *Session) RemovePlayer(player *t.Player) {
@@ -123,6 +135,11 @@ func (s *Session) handleInput(input t.GameInput) {
 		if s.game != nil {
 			return // already started
 		}
+		if err := s.validatePlayerCount(); err != nil {
+			s.rejectInput(input, err.Error())
+			return
+		}
+		s.gameStarted.Store(true)
 		s.game = g.NewGame(s)
 		s.game.Start()
 	default:
@@ -131,6 +148,27 @@ func (s *Session) handleInput(input t.GameInput) {
 		}
 		s.game.HandleGameInput(input)
 	}
+}
+
+func (s *Session) validatePlayerCount() error {
+	s.mu.Lock()
+	n := len(s.players)
+	s.mu.Unlock()
+
+	if n < g.MinPlayers || n > g.MaxPlayers {
+		return fmt.Errorf("need between %d and %d players to start, have %d", g.MinPlayers, g.MaxPlayers, n)
+	}
+	return nil
+}
+
+func (s *Session) rejectInput(input t.GameInput, message string) {
+	s.handleOutput(t.GameOutput{
+		Players: []t.PlayerID{input.Player.ID},
+		Env: t.Envelope{
+			Type:    t.MsgInvalidAction,
+			Payload: mustMarshal(InvalidActionPayload{Message: message}),
+		},
+	})
 }
 
 func (s *Session) handleOutput(output t.GameOutput) {

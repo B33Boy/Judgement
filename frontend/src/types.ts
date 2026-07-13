@@ -25,7 +25,7 @@ export interface GameState {
   state: "bidding" | "playing" | "resolution" | "gameover";
   turnPlayer: string; // PlayerID
   trumpSuit: string | null;
-  table: Record<string, string | undefined>; // PlayerID -> CardID
+  table: Record<string, Card | undefined>; // PlayerID -> Card played
   bids: Record<string, number>; // PlayerID -> bid
   handsWon: Record<string, number>; // PlayerID -> number hands won this
   scores: Record<string, number[]>; // PlayerID -> score per round

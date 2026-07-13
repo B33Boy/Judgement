@@ -3,9 +3,10 @@ import type { MessageHandler } from "../context/GameContext";
 
 type BidBoxProps = {
   msgFunction: MessageHandler;
+  maxBid: number;
 };
 
-export default function BidBox({ msgFunction }: BidBoxProps) {
+export default function BidBox({ msgFunction, maxBid }: BidBoxProps) {
   const [bidVal, setBidVal] = useState<number | null>(null);
 
   function handleBid() {
@@ -16,7 +17,7 @@ export default function BidBox({ msgFunction }: BidBoxProps) {
   return (
     <div className="bid-box">
       <div className="bid-buttons">
-        {Array.from({ length: 8 }, (_, i) => (
+        {Array.from({ length: maxBid + 1 }, (_, i) => (
           <button
             key={i}
             onClick={() => setBidVal(i)}
